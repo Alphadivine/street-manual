@@ -158,7 +158,7 @@ label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-tran
 .chip.warnchip.on{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.4);color:var(--warn)}
 
 /* ---------- item grid ---------- */
-.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px;align-items:start}
 .item{
   background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
   cursor:pointer;transition:.15s;position:relative;overflow:hidden;
@@ -240,9 +240,19 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .benchgroup h4 .loc{font-size:11.5px;color:var(--dim2);font-weight:500}
 
 /* ---------- bench cards ---------- */
-.benches{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.bench{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px}
-.bench h3{margin:0 0 3px;font-size:16px;font-weight:750}
+.benches{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
+.bench{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.bench .bbody{padding:15px}
+.bench .bthumb{position:relative;aspect-ratio:16/9;background:rgba(0,0,0,.35);cursor:pointer}
+.bench .bthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.bench .bthumb .count{
+  position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:800;
+  background:rgba(0,0,0,.65);border:1px solid var(--line2);padding:2px 7px;border-radius:999px;
+}
+.bench h3[data-viewbench]{cursor:pointer}
+.bench h3[data-viewbench]:hover{text-decoration:underline}
+.bench h3{margin:0 0 3px;font-size:16px;font-weight:750;display:flex;align-items:center;gap:8px}
+.bench h3 .bdot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 8px currentColor}
 .bench .loc{font-size:12.5px;color:var(--acc2);margin-bottom:9px}
 .bench .cnt{font-size:12px;color:var(--dim2)}
 .bench .list{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px}
@@ -250,7 +260,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .bench .list span:hover{background:rgba(255,255,255,.12)}
 
 /* ---------- spots (drop offs / bus blocks) ---------- */
-.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px;align-items:start}
 .spot{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:.15s}
 .spot:hover{border-color:var(--line2);background:var(--panel2);transform:translateY(-1px)}
 .spot .thumb{position:relative;aspect-ratio:16/9;background:rgba(0,0,0,.35);display:grid;place-items:center;font-size:34px;opacity:.95}
@@ -307,6 +317,19 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 }
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast.err{border-color:rgba(248,113,113,.5);color:#fecaca}
+
+.swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.swatches button{
+  width:32px;height:32px;border-radius:9px;border:2px solid transparent;cursor:pointer;padding:0;
+  transition:.15s;
+}
+.swatches button:hover{transform:scale(1.08)}
+.swatches button.on{border-color:var(--txt);box-shadow:0 0 0 2px rgba(0,0,0,.5) inset}
+.swatches button.auto{
+  width:auto;padding:0 12px;background:rgba(255,255,255,.06);color:var(--dim);
+  font-size:12px;font-weight:700;border-color:var(--line);
+}
+.swatches button.auto.on{border-color:var(--txt);color:var(--txt)}
 
 .hidden{display:none!important}
 /* .fab sets display:grid, which would otherwise beat the browser's [hidden] rule */
@@ -661,6 +684,29 @@ const isCraftable = it => !!(it && it.ingredients && it.ingredients.length);
 const benchName = id => (S.benches.find(b=>b.id===id)||{}).name || "";
 const benchOf   = id => S.benches.find(b=>b.id===id) || null;
 
+/* Each bench gets its own colour so you can spot at a glance which one an item
+   belongs to. Eight hues in a fixed order — checked for colour-blind separation
+   and contrast against this background rather than picked by eye. The bench name
+   is always written in the tag too, so colour is a shortcut, never the only clue. */
+const BENCH_HUES = ["#3987e5","#d95926","#199e70","#c98500",
+                    "#d55181","#008300","#9085e9","#e66767"];
+function hexA(h,a){
+  const n = parseInt(h.slice(1),16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+function benchColor(id){
+  const b = benchOf(id);
+  if(!b) return null;
+  if(b.color) return b.color;                       // picked by hand
+  const order = S.benches.map(x=>x.id).sort();      // stable, so colours don't shuffle
+  const i = order.indexOf(b.id);
+  return BENCH_HUES[(i<0?0:i) % BENCH_HUES.length];
+}
+function benchTagStyle(id){
+  const c = benchColor(id);
+  return c ? `background:${hexA(c,.15)};color:${c};border:1px solid ${hexA(c,.42)}` : "";
+}
+
 /* =====================================================================
    THE ENGINE — recursive raw-material rollup
    ---------------------------------------------------------------------
@@ -893,7 +939,7 @@ function itemCard(it){
     ${badge}
     <div class="nm">${esc(it.name)}${(it.outputQty||1)>1?` <span class="muted tiny">×${it.outputQty}</span>`:""}</div>
     <div class="sub">
-      ${it.benchId? `<span class="tag tbench">${esc(benchName(it.benchId))}</span>`:""}
+      ${it.benchId? `<span class="tag tbench" style="${benchTagStyle(it.benchId)}">${esc(benchName(it.benchId))}</span>`:""}
       ${it.category? `<span class="tag">${esc(it.category)}</span>`:""}
       ${num(it.craftTime)!=null? `<span class="tag">${dur(it.craftTime)}</span>`:""}
       ${it.levelReq? `<span class="tag">lvl ${esc(it.levelReq)}</span>`:""}
@@ -920,22 +966,29 @@ function viewBenches(){
   <div class="benches">
     ${S.benches.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(b=>{
       const mine = S.items.filter(i=>i.benchId===b.id).sort((x,y)=>x.name.localeCompare(y.name));
-      return `<div class="bench">
-        <h3>${esc(b.name)}</h3>
-        <div class="loc">${b.location? esc(b.location) : "<span class='muted'>location not set</span>"}</div>
-        <div class="cnt">${mine.length} recipe${mine.length===1?"":"s"}</div>
-        ${b.notes? `<div class="tiny muted" style="margin-top:7px">${esc(b.notes)}</div>`:""}
-        <div class="list">${mine.slice(0,14).map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}
-          ${mine.length>14?`<span class="muted">+${mine.length-14}</span>`:""}</div>
-        ${S.canEdit? `<div style="margin-top:12px;display:flex;gap:8px">
-          <button class="btn sm ghost" data-editbench="${b.id}">Edit</button>
-        </div>`:""}
+      const c = benchColor(b.id);
+      const cover = imgThumb((b.images||[])[0]);
+      return `<div class="bench" style="border-left:3px solid ${c}">
+        ${cover? `<div class="bthumb" data-viewbench="${b.id}"><img src="${esc(cover)}" alt="" loading="lazy">
+          ${(b.images||[]).length>1? `<span class="count">${b.images.length}</span>`:""}</div>`:""}
+        <div class="bbody">
+          <h3 data-viewbench="${b.id}"><span class="bdot" style="background:${c}"></span>${esc(b.name)}</h3>
+          <div class="loc">${b.location? esc(b.location) : "<span class='muted'>location not set</span>"}</div>
+          <div class="cnt">${mine.length} recipe${mine.length===1?"":"s"}${(b.images||[]).length&&!cover?" · has photos":""}</div>
+          ${b.notes? `<div class="tiny muted" style="margin-top:7px">${esc(b.notes)}</div>`:""}
+          <div class="list">${mine.slice(0,14).map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}
+            ${mine.length>14?`<span class="muted">+${mine.length-14}</span>`:""}</div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn sm ghost" data-viewbench="${b.id}">${(b.images||[]).length? "Photos":"Details"}</button>
+            ${S.canEdit? `<button class="btn sm ghost" data-editbench="${b.id}">Edit</button>`:""}
+          </div>
+        </div>
       </div>`;
     }).join("")}
   </div>
   ${unassigned.length? `<div class="card" style="margin-top:16px;border-color:rgba(251,191,36,.3)">
     <div class="sec-title" style="color:var(--warn)">${unassigned.length} recipe${unassigned.length>1?"s":""} with no bench assigned</div>
-    <div class="bench"><div class="list" style="margin:0">${unassigned.map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}</div></div>
+    <div class="list" style="margin:0">${unassigned.map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}</div>
   </div>`:""}`;
 }
 
@@ -1032,8 +1085,10 @@ function viewPlanner(){
         <div class="sec-title">Bench route — in order</div>
         ${order.length? order.map((k,i)=>{
           const b = benchOf(k);
+          const c = b? benchColor(b.id) : null;
           return `<div class="benchgroup">
-            <h4><span class="step">${i+1}</span> ${b? esc(b.name) : "Bench not set"}
+            <h4><span class="step" style="${c?`background:${hexA(c,.18)};color:${c}`:""}">${i+1}</span>
+              <span style="${c?`color:${c}`:""}">${b? esc(b.name) : "Bench not set"}</span>
               ${b&&b.location? `<span class="loc">${esc(b.location)}</span>`:""}</h4>
             <div class="tscroll"><table>
               <thead><tr><th>Craft</th><th class="num">Runs</th><th class="num">Yield</th><th class="num">Time</th></tr></thead>
@@ -1124,8 +1179,7 @@ function openSpot(id){
       <button class="x" data-close>×</button>
     </div>
     <div class="mbody">
-      ${(s.images||[]).length? `<div class="shots">${s.images.map((e,i)=>
-        `<img src="${esc(imgThumb(e))}" alt="" data-shot="${i}" data-spotid="${s.id}">`).join("")}</div>`:""}
+      ${galleryHTML(s.images, s.id)}
       ${s.blocks? `<div class="sec-title">Blocks</div><div style="margin-bottom:18px">⛔ ${esc(s.blocks)}</div>`:""}
       ${s.vehicle? `<div class="sec-title">Needs</div><div style="margin-bottom:18px">${esc(s.vehicle)}</div>`:""}
       ${s.notes? `<div class="sec-title">How to run it</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(s.notes)}</div>`:""}
@@ -1138,12 +1192,7 @@ function openSpot(id){
                  : `<button class="btn ghost" data-close>Close</button>`}
     </div>`, "wide");
 
-  // thumbnails are what got rendered; pull the full-size versions in behind them
-  (s.images||[]).forEach(async (e,i)=>{
-    const full = await imgFull(e);
-    const el = $(`[data-shot="${i}"][data-spotid="${s.id}"]`);
-    if(el && full && el.src !== full) el.src = full;
-  });
+  hydrateGallery(s.images, s.id);
 }
 
 function openShot(src){
@@ -1181,17 +1230,7 @@ function openSpotEdit(id, kind){
       <div style="margin-bottom:12px"><label class="f">What you need</label>
         <input id="s_veh" value="${esc(d.vehicle)}" placeholder="Somewhere to stash a second car"></div>`}
 
-      <div class="sec-title" style="margin-top:18px">Screenshots</div>
-      <div class="dropzone" id="dz">
-        <div class="tiny">Click to pick a file, drag one in, or just paste (Ctrl/⌘ V)</div>
-        <input type="file" id="s_file" accept="image/*" multiple class="hidden">
-      </div>
-      <div style="display:flex;gap:8px;margin:8px 0 0">
-        <input id="s_url" placeholder="…or paste an image link (Discord, imgur)" style="flex:1">
-        <button class="btn sm" id="addUrl">Add</button>
-      </div>
-      <div class="shotedit" id="shots"></div>
-      <div class="tiny muted" id="shotInfo" style="margin-top:6px"></div>
+      ${shotEditorHTML()}
 
       <div style="margin:18px 0 12px"><label class="f">Tags</label>
         <input id="s_tags" value="${esc((d.tags||[]).join(", "))}" placeholder="heli-proof, needs 2 cars, night only">
@@ -1205,52 +1244,7 @@ function openSpotEdit(id, kind){
       <button class="btn primary" id="saveSpot">${s? "Save changes":"Add "+K.one}</button>
     </div>`, "wide");
 
-  let shots = (d.images||[]).slice();
-
-  function paintShots(){
-    $("#shots").innerHTML = shots.map((e,i)=>
-      `<div class="sh"><img src="${esc(imgThumb(e))}" alt=""><button type="button" data-rm="${i}">✕</button></div>`).join("");
-    $$("#shots [data-rm]").forEach(b=> b.onclick = ()=>{ shots.splice(+b.dataset.rm,1); paintShots(); });
-    const bytes = shots.reduce((a,e)=> a + ((e && e._full)? e._full.length*0.75 : 0), 0);
-    const links = shots.filter(e=>e && e.src).length;
-    $("#shotInfo").textContent = shots.length
-      ? `${shots.length} image${shots.length>1?"s":""}`
-        + (links? ` · ${links} link${links>1?"s":""}`:"")
-        + (bytes? ` · about ${Math.round(bytes/1024)} KB to upload`:"")
-      : "";
-  }
-  paintShots();
-
-  async function addFiles(files){
-    for(const f of files){
-      if(!f || !f.type.startsWith("image/")) continue;
-      if(shots.length>=8){ toast("8 images is the limit per spot",1); break; }
-      try{
-        const {full, thumb} = await prepShot(f);
-        shots.push({ thumb, _full:full });
-      }catch(e){ toast("Couldn't read that image",1); }
-    }
-    paintShots();
-  }
-
-  const dz = $("#dz");
-  dz.onclick = ()=>$("#s_file").click();
-  $("#s_file").onchange = e=>addFiles([...e.target.files]);
-  dz.ondragover = e=>{ e.preventDefault(); dz.classList.add("over"); };
-  dz.ondragleave = ()=>dz.classList.remove("over");
-  dz.ondrop = e=>{ e.preventDefault(); dz.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
-  $("#addUrl").onclick = ()=>{
-    const u = $("#s_url").value.trim();
-    if(!u) return;
-    if(!/^https?:\/\//i.test(u)) return toast("That doesn't look like a link",1);
-    shots.push({ src:u }); $("#s_url").value=""; paintShots();
-  };
-  // paste a screenshot straight in
-  $("#modalHost")._paste = e=>{
-    const files = [...(e.clipboardData&&e.clipboardData.files||[])];
-    if(files.length){ e.preventDefault(); addFiles(files); }
-  };
-  document.addEventListener("paste", $("#modalHost")._paste);
+  const shotBox = mountShotEditor(d.images);
 
   $("#saveSpot").onclick = async ()=>{
     const name = $("#s_name").value.trim();
@@ -1267,18 +1261,8 @@ function openSpotEdit(id, kind){
     const btn = $("#saveSpot");
     btn.disabled = true; btn.textContent = "Saving…";
     try{
-      // upload anything newly added, keep everything already stored as-is
-      for(const e of shots){
-        if(e && e._full){ rec.images.push({ id: await putImage(e._full), thumb: e.thumb }); }
-        else rec.images.push(e);
-      }
+      rec.images = await shotBox.commit((s&&s.images)||[]);
       const saved = await Store.saveSpot(rec);
-      // and clear out images that were removed from this spot
-      const kept = new Set(rec.images.map(imgId).filter(Boolean));
-      for(const old of ((s&&s.images)||[])){
-        const id = imgId(old);
-        if(id && !kept.has(id)) await dropImage(id);
-      }
       const i = S.spots.findIndex(x=>x.id===saved.id);
       if(i>=0) S.spots[i]=saved; else S.spots.push(saved);
       closeModal(); render(); toast("Saved");
@@ -1287,6 +1271,106 @@ function openSpotEdit(id, kind){
       toast("Save failed: "+(err.message||err),1);
     }
   };
+}
+
+/* ---------------------------------------------------------------------
+   The screenshot picker, shared by spots and benches: click, drag, paste,
+   or add a link. Uploads are deferred until save so cancelling never
+   leaves orphaned images behind.
+   --------------------------------------------------------------------- */
+function shotEditorHTML(label){
+  return `
+      <div class="sec-title" style="margin-top:18px">${label||"Screenshots"}</div>
+      <div class="dropzone" id="dz">
+        <div class="tiny">Click to pick a file, drag one in, or just paste (Ctrl/⌘ V)</div>
+        <input type="file" id="s_file" accept="image/*" multiple class="hidden">
+      </div>
+      <div style="display:flex;gap:8px;margin:8px 0 0">
+        <input id="s_url" placeholder="…or paste an image link (Discord, imgur)" style="flex:1">
+        <button class="btn sm" id="addUrl">Add</button>
+      </div>
+      <div class="shotedit" id="shots"></div>
+      <div class="tiny muted" id="shotInfo" style="margin-top:6px"></div>`;
+}
+
+function mountShotEditor(initial){
+  let shots = (initial||[]).slice();
+
+  function paint(){
+    $("#shots").innerHTML = shots.map((e,i)=>
+      `<div class="sh"><img src="${esc(imgThumb(e))}" alt=""><button type="button" data-rm="${i}">✕</button></div>`).join("");
+    $$("#shots [data-rm]").forEach(b=> b.onclick = ()=>{ shots.splice(+b.dataset.rm,1); paint(); });
+    const bytes = shots.reduce((a,e)=> a + ((e && e._full)? e._full.length*0.75 : 0), 0);
+    const links = shots.filter(e=>e && e.src).length;
+    $("#shotInfo").textContent = shots.length
+      ? `${shots.length} image${shots.length>1?"s":""}`
+        + (links? ` · ${links} link${links>1?"s":""}`:"")
+        + (bytes? ` · about ${Math.round(bytes/1024)} KB to upload`:"")
+      : "";
+  }
+  paint();
+
+  async function addFiles(files){
+    for(const f of files){
+      if(!f || !f.type.startsWith("image/")) continue;
+      if(shots.length>=8){ toast("8 images is the limit",1); break; }
+      try{
+        const {full, thumb} = await prepShot(f);
+        shots.push({ thumb, _full:full });
+      }catch(e){ toast("Couldn't read that image",1); }
+    }
+    paint();
+  }
+
+  const dz = $("#dz");
+  dz.onclick = ()=>$("#s_file").click();
+  $("#s_file").onchange = e=>addFiles([...e.target.files]);
+  dz.ondragover = e=>{ e.preventDefault(); dz.classList.add("over"); };
+  dz.ondragleave = ()=>dz.classList.remove("over");
+  dz.ondrop = e=>{ e.preventDefault(); dz.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
+  $("#addUrl").onclick = ()=>{
+    const u = $("#s_url").value.trim();
+    if(!u) return;
+    if(!/^https?:\/\//i.test(u)) return toast("That doesn't look like a link",1);
+    shots.push({ src:u }); $("#s_url").value=""; paint();
+  };
+  $("#modalHost")._paste = e=>{
+    const files = [...(e.clipboardData&&e.clipboardData.files||[])];
+    if(files.length){ e.preventDefault(); addFiles(files); }
+  };
+  document.addEventListener("paste", $("#modalHost")._paste);
+
+  return {
+    // uploads the new ones, then deletes any that were taken off this record
+    async commit(previous){
+      const out = [];
+      for(const e of shots){
+        if(e && e._full) out.push({ id: await putImage(e._full), thumb: e.thumb });
+        else out.push(e);
+      }
+      const kept = new Set(out.map(imgId).filter(Boolean));
+      for(const old of (previous||[])){
+        const id = imgId(old);
+        if(id && !kept.has(id)) await dropImage(id);
+      }
+      return out;
+    }
+  };
+}
+
+// A gallery that shows thumbnails immediately and swaps the full-size images
+// in behind them once they've loaded.
+function galleryHTML(images, key){
+  if(!(images||[]).length) return "";
+  return `<div class="shots">${images.map((e,i)=>
+    `<img src="${esc(imgThumb(e))}" alt="" data-shot="${i}" data-spotid="${esc(key)}">`).join("")}</div>`;
+}
+function hydrateGallery(images, key){
+  (images||[]).forEach(async (e,i)=>{
+    const full = await imgFull(e);
+    const el = $(`[data-shot="${i}"][data-spotid="${key}"]`);
+    if(el && full && el.src !== full) el.src = full;
+  });
 }
 
 // Screenshots get downscaled before storing. You only need to recognise the
@@ -1365,7 +1449,9 @@ function openItem(id){
         return `<div class="tnode ${sub?"":"unknown"}">
           <span class="q">${esc(String(g.qty??"?"))}×</span>
           <span class="nm ${sub?"craftable":""}" ${sub?`data-id="${sub.id}"`:""}>${esc(g.name)}</span>
-          <span class="meta">${!sub? "not listed" : isC? "craft @ "+(benchName(sub.benchId)||"?") : (sub.source||"material")}</span>
+          <span class="meta">${!sub? "not listed"
+            : isC? `craft @ <span style="${sub.benchId?`color:${benchColor(sub.benchId)}`:""}">${esc(benchName(sub.benchId)||"?")}</span>`
+            : esc(sub.source||"material")}</span>
         </div>`;
       }).join("")}
     </div>` : "";
@@ -1386,7 +1472,7 @@ function openItem(id){
       ${e.steps.filter(s=>s.item.id!==it.id).map(s=>`<div class="tnode">
         <span class="q">${s.crafts}×</span>
         <span class="nm craftable" data-id="${s.item.id}">${esc(s.item.name)}</span>
-        <span class="meta">${esc(benchName(s.item.benchId)||"bench not set")}</span>
+        <span class="meta" style="${s.item.benchId?`color:${benchColor(s.item.benchId)}`:""}">${esc(benchName(s.item.benchId)||"bench not set")}</span>
       </div>`).join("")}
     </div>` : "";
 
@@ -1395,7 +1481,7 @@ function openItem(id){
       <div style="flex:1">
         <h2>${esc(it.name)}</h2>
         <div class="sub">
-          ${craft? (it.benchId? esc(benchName(it.benchId)) : "no bench set") : "raw material"}
+          ${craft? (it.benchId? `<span style="color:${benchColor(it.benchId)};font-weight:650">${esc(benchName(it.benchId))}</span>` : "no bench set") : "raw material"}
           ${it.category? " · "+esc(it.category):""}
           ${num(it.craftTime)!=null? " · "+dur(it.craftTime):""}
           ${it.levelReq? " · level "+esc(it.levelReq):""}
@@ -1541,6 +1627,35 @@ function upsertLocal(it){
 /* =====================================================================
    MODAL: BENCH EDIT
    ===================================================================== */
+// Read-only crew can't open the editor, so the photos and details live here.
+function openBenchView(id){
+  const b = benchOf(id); if(!b) return;
+  const c = benchColor(b.id);
+  const mine = S.items.filter(i=>i.benchId===b.id).sort((x,y)=>x.name.localeCompare(y.name));
+  openModal(`
+    <div class="mhead">
+      <div style="flex:1">
+        <h2><span class="bdot" style="background:${c};display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:9px"></span>${esc(b.name)}</h2>
+        <div class="sub">${b.location? esc(b.location) : "location not set"}</div>
+      </div>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="mbody">
+      ${galleryHTML(b.images, "bench-"+b.id)}
+      ${b.notes? `<div class="sec-title">Notes</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(b.notes)}</div>`:""}
+      <div class="sec-title">Makes ${mine.length? `(${mine.length})`:""}</div>
+      ${mine.length
+        ? `<div class="chips">${mine.map(i=>`<button class="chip" data-id="${i.id}">${esc(i.name)}</button>`).join("")}</div>`
+        : `<div class="tiny muted">Nothing assigned to this bench yet.</div>`}
+      ${!(b.images||[]).length? `<div class="tiny muted" style="margin-top:18px">No photos yet${S.canEdit?" — add some in Edit so nobody has to describe where it is in voice.":"."}</div>`:""}
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Close</button>
+      ${S.canEdit? `<button class="btn primary" data-editbench="${b.id}">Edit</button>`:""}
+    </div>`, "wide");
+  hydrateGallery(b.images, "bench-"+b.id);
+}
+
 function openBench(id){
   if(!S.canEdit) return toast("You need the edit code to change things",1);
   const b = id ? S.benches.find(x=>x.id===id) : null;
@@ -1550,7 +1665,18 @@ function openBench(id){
     <div class="mbody">
       <div style="margin-bottom:12px"><label class="f">Bench name *</label><input id="b_name" value="${esc(d.name)}" placeholder="e.g. Weapon Bench" autofocus></div>
       <div style="margin-bottom:12px"><label class="f">Location in the city</label><input id="b_loc" value="${esc(d.location)}" placeholder="e.g. Sandy Shores garage, back room"></div>
+      <div style="margin-bottom:12px">
+        <label class="f">Colour</label>
+        <div class="swatches" id="b_colors">
+          <button type="button" class="auto ${d.color?"":"on"}" data-color="">Auto</button>
+          ${BENCH_HUES.map(h=>`<button type="button" class="${d.color===h?"on":""}" data-color="${h}" style="background:${hexA(h,.9)}" title="${h}"></button>`).join("")}
+        </div>
+        <div class="tiny muted" style="margin-top:6px">Shows on every item made here, so you can spot the bench at a glance.</div>
+      </div>
       <div><label class="f">Notes</label><textarea id="b_notes" placeholder="Access requirements, gang only, hours…">${esc(d.notes)}</textarea></div>
+
+      ${shotEditorHTML("Photos of the bench")}
+      <div class="tiny muted" style="margin-top:6px">Where it is, what it looks like — so nobody has to describe it in voice.</div>
     </div>
     <div class="mfoot">
       ${b? `<button class="btn danger" id="delBench">Delete</button>`:""}
@@ -1559,22 +1685,37 @@ function openBench(id){
       <button class="btn primary" id="saveBench">Save</button>
     </div>`);
 
+  const shotBox = mountShotEditor(d.images);
+  let pickedColor = d.color || "";
+  $$("#b_colors button").forEach(btn=> btn.onclick = ()=>{
+    pickedColor = btn.dataset.color;
+    $$("#b_colors button").forEach(x=>x.classList.toggle("on", x===btn));
+  });
+
   $("#saveBench").onclick = async ()=>{
     const name = $("#b_name").value.trim();
     if(!name) return toast("Name it",1);
-    const rec = { id: b? b.id : uid("bn"), name, location:$("#b_loc").value.trim(), notes:$("#b_notes").value.trim() };
+    const rec = { id: b? b.id : uid("bn"), name, location:$("#b_loc").value.trim(),
+                  notes:$("#b_notes").value.trim(), color: pickedColor, images: [] };
+    const btn = $("#saveBench");
+    btn.disabled = true; btn.textContent = "Saving…";
     try{
+      rec.images = await shotBox.commit((b&&b.images)||[]);
       const saved = await Store.saveBench(rec);
       const i = S.benches.findIndex(x=>x.id===saved.id);
       if(i>=0) S.benches[i]=saved; else S.benches.push(saved);
       closeModal(); render(); toast("Bench saved");
-    }catch(err){ toast("Save failed: "+(err.message||err),1) }
+    }catch(err){
+      btn.disabled = false; btn.textContent = "Save";
+      toast("Save failed: "+(err.message||err),1);
+    }
   };
   if(b) $("#delBench").onclick = async ()=>{
     const n = S.items.filter(i=>i.benchId===b.id).length;
     if(!confirm(`Delete "${b.name}"?${n?` ${n} recipe(s) will lose their bench.`:""}`)) return;
     try{
       await Store.delBench(b.id);
+      for(const e of (b.images||[])){ const id = imgId(e); if(id) await dropImage(id); }
       S.benches = S.benches.filter(x=>x.id!==b.id);
       for(const it of S.items) if(it.benchId===b.id){ it.benchId=""; await Store.saveItem(it); }
       closeModal(); render(); toast("Bench deleted");
@@ -1687,19 +1828,20 @@ function openData(){
   $("#expJson").onclick = async ()=>{
     const btn = $("#expJson"); btn.disabled = true; btn.textContent = "Gathering…";
     try{
-      // spots only carry thumbnails, so pull the full images in for the backup
-      const spots = [];
-      for(const sp of S.spots){
+      // records only carry thumbnails, so pull the full images in for the backup
+      const inlineImages = async rec => {
         const images = [];
-        for(const e of (sp.images||[])){
+        for(const e of (rec.images||[])){
           const id = imgId(e);
           if(id) images.push({ id, thumb:imgThumb(e), data: await getImage(id) });
           else images.push(e);
         }
-        spots.push({ ...sp, images });
-      }
+        return { ...rec, images };
+      };
+      const spots = [];   for(const sp of S.spots)   spots.push(await inlineImages(sp));
+      const benches = []; for(const bn of S.benches) benches.push(await inlineImages(bn));
       download("street-manual-backup.json",
-        JSON.stringify({v:3, exported:new Date().toISOString(), benches:S.benches, items:S.items, spots}, null, 2),
+        JSON.stringify({v:4, exported:new Date().toISOString(), benches, items:S.items, spots}, null, 2),
         "application/json");
     }catch(err){ toast("Export failed: "+(err.message||err),1); }
     btn.disabled = false; btn.textContent = "Export backup (.json)";
@@ -1725,19 +1867,20 @@ function openData(){
       const sp = d.spots||[];   // v1 backups predate the spots tabs
       if(!confirm(`Replace everything with ${d.items.length} items, ${(d.benches||[]).length} benches and ${sp.length} saved spots?`)) return;
       toast("Importing…");
-      await Store.replaceAll(d.items, d.benches||[], []);   // clears old screenshots too
-      const spots = [];
-      for(const one of sp){
+      await Store.replaceAll(d.items, [], []);   // clears old screenshots too
+      const restore = async rec => {
         const images = [];
-        for(const e of (one.images||[])){
+        for(const e of (rec.images||[])){
           if(e && e.data) images.push({ id: await putImage(e.data), thumb: e.thumb || e.data });
           else images.push(e);
         }
-        const rec = { ...one, images };
-        await Store.saveSpot(rec);
-        spots.push(rec);
-      }
-      S.items = d.items; S.benches = d.benches||[]; S.spots = spots; reindex();
+        return { ...rec, images };
+      };
+      const benches = [];
+      for(const one of (d.benches||[])){ const r = await restore(one); await Store.saveBench(r); benches.push(r); }
+      const spots = [];
+      for(const one of sp){ const r = await restore(one); await Store.saveSpot(r); spots.push(r); }
+      S.items = d.items; S.benches = benches; S.spots = spots; reindex();
       closeModal(); render(); toast("Imported");
     }catch(err){ toast("Import failed: "+err.message,1) }
   };
@@ -1804,7 +1947,6 @@ function wireView(){
   $$("[data-stag]").forEach(b=> b.onclick = ()=>{ S.spotTag = b.dataset.stag; render(); });
 
   const ab = $("#addBench1"); if(ab) ab.onclick = ()=>openBench(null);
-  $$("[data-editbench]").forEach(b=> b.onclick = ()=>openBench(b.dataset.editbench));
 
   // planner
   const pa = $("#planAddBtn");
@@ -1843,6 +1985,7 @@ document.addEventListener("click", e=>{
     }).catch(()=>toast("Delete failed",1));
     return;
   }
+  const eb = e.target.closest("[data-editbench]"); if(eb){ openBench(eb.dataset.editbench); return; }
   const ed = e.target.closest("[data-edit]"); if(ed){ openEdit(ed.dataset.edit); return; }
   const pl = e.target.closest("[data-plan]");
   if(pl){
@@ -1854,6 +1997,7 @@ document.addEventListener("click", e=>{
   }
   const tab = e.target.closest("[data-tab]"); if(tab){ S.tab = tab.dataset.tab; S.spotQ=""; S.spotTag=""; render(); return; }
 
+  const vb = e.target.closest("[data-viewbench]"); if(vb){ openBenchView(vb.dataset.viewbench); return; }
   const ns = e.target.closest("[data-newspot]");  if(ns){ openSpotEdit(null, ns.dataset.newspot); return; }
   const es = e.target.closest("[data-editspot]"); if(es){ openSpotEdit(es.dataset.editspot); return; }
   const ds = e.target.closest("[data-delspot]");
