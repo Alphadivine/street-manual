@@ -11,7 +11,7 @@ Street Manual is a single self-contained HTML file. No build step, no framework,
 own — it runs entirely in the browser and stores shared data in a free
 [Firebase Firestore](https://firebase.google.com/products/firestore) database.
 
-**Live site:** https://alphadivine.github.io/street-manual/
+> **Live site:** https://alphadivine.github.io/street-manual/`
 
 ---
 
@@ -38,12 +38,44 @@ Pick several things and quantities — "2 pistols, 10 lockpicks, 1 repair kit" �
 Every crafting bench with its location in the city and everything it makes. Recipes with no bench
 assigned get called out so nothing hides.
 
+Each bench gets **its own colour**, carried onto the tag of every item made there, the bench card,
+the planner's bench route and the recipe tree — so you can spot which bench an item belongs to
+without reading. Eight hues in a fixed order, checked for colour-blind separation and contrast
+against the dark background rather than picked by eye; the bench name is always in the tag too, so
+colour is a shortcut and never the only clue. Override any of them with the swatch picker.
+
+Benches take **photos** as well. Clicking one opens a detail view with the gallery, its notes and
+everything it makes — open to read-only crew too, so nobody has to describe where a bench is over
+voice.
+
 ### Drop Offs & Bus Blocks
 The chase spots the crew otherwise keeps in their heads. Each one holds a name, area/landmark,
 screenshots, tags and a short "how to run it" note. Bus blocks also record **what it blocks** and
 **what you need** — so mid-chase you can tell at a glance whether a spot fits the situation.
 
 Tags (`heli-proof`, `needs 2 cars`, `night only`) become the filter chips at the top of each tab.
+
+---
+
+## 📐 Blueprints
+
+Some recipes need a blueprint as well as ingredients, so blueprints are their own thing rather than
+being faked as an ingredient. On a recipe they sit in an optional, collapsed **Blueprints** section
+— most items won't have one.
+
+Each blueprint on a recipe is marked one of two ways, because it changes the maths:
+
+- **Unlock** — you own it once and can craft forever. Needed once no matter how many you're making.
+- **Used up** — one (or more) goes every craft, so it scales with the quantity.
+
+Blueprints get their own catalogue entries, auto-created when you name one, with a **Blueprint**
+badge and their own filter chip — so you can record where each one drops from and search them like
+anything else. They're deliberately kept out of the raw-materials shopping list; a blueprint isn't
+something you pick up at the hardware store.
+
+The planner gives them a **Blueprints needed** panel with a tick-box for the ones you own (kept on
+your own device, like on-hand counts) and tells you plainly what you're missing — so you don't get
+to the bench and find you can't start.
 
 ---
 
@@ -57,8 +89,10 @@ These are the things that quietly go wrong in a spreadsheet:
   you out for the steel. (On-hand counts stay on your own device even in shared mode — they're
   yours, not the crew's — and stay editable for read-only users.)
 - **Loops** — if two recipes ever reference each other, it's caught and flagged rather than hanging.
-- **Unknowns** — an ingredient you name that isn't listed yet is created automatically as a raw
-  material, so the catalogue fills itself in as you type.
+- **Unknowns** — an ingredient or blueprint you name that isn't listed yet is created automatically,
+  so the catalogue fills itself in as you type.
+- **Blueprints** — an unlock is needed once however many you make; one that gets used up scales with
+  the craft count. Neither lands in the raw-materials list.
 - **Honest blanks** — a missing value shows as `—`, never as `0`.
 
 ### What "Needs attention" means
@@ -68,7 +102,7 @@ fields:
 
 - a recipe with **no bench** — the bench route can't place it
 - a recipe with **no craft time** — time totals come out short
-- a recipe naming an **ingredient that isn't listed** — it can't be broken down
+- a recipe naming an **ingredient or blueprint that isn't listed** — it can't be broken down
 
 A raw material with no source written down is *not* flagged; it works fine everywhere. Those sit
 under a separate, quiet **No source yet** chip for when you feel like tidying.
@@ -101,13 +135,13 @@ Built on the assumption there will be a lot of them:
 
 - An upload is downscaled to ~1400px JPEG, stepped down further if still large. A 2560×1440 grab
   lands around 200 KB.
-- A **small thumbnail (~25 KB) lives on the spot record**; the full-size image sits in its own
-  record and is only fetched when you open that spot. The Drop Offs and Bus Blocks tabs stay fast
-  no matter how many pictures pile up.
+- A **small thumbnail (~25 KB) lives on the record**; the full-size image sits in its own record and
+  is only fetched when you open that spot or bench. The tabs stay fast no matter how many pictures
+  pile up.
 - A Firestore record caps at 1 MB — the step-down keeps every image comfortably under it.
-- Deleting a spot, or removing an image from one, deletes the stored image too. No orphans.
-- Up to 8 images per spot. You can paste a Discord/imgur **link** instead of uploading, which uses
-  no storage at all.
+- Deleting a spot or bench, or removing an image from one, deletes the stored image too. No orphans.
+- Up to 8 images each. You can paste a Discord/imgur **link** instead of uploading, which uses no
+  storage at all.
 
 At ~250 KB an image, Firestore's free 1 GiB is roughly 3,000 screenshots.
 

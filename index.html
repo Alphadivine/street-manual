@@ -170,6 +170,8 @@ label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-tran
 .item .ing b{color:var(--txt);font-weight:600}
 .item .badge{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:6px}
 .badge.raw{background:rgba(148,163,184,.16);color:#94a3b8}
+.badge.bp{background:rgba(144,133,233,.18);color:#9085e9}
+.tag.tbp{background:rgba(144,133,233,.15);color:#9085e9}
 .badge.prof{background:rgba(74,222,128,.14);color:var(--acc)}
 .badge.loss{background:rgba(248,113,113,.14);color:var(--bad)}
 .badge.gap{background:rgba(251,191,36,.14);color:var(--warn)}
@@ -220,6 +222,12 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ingrow{display:grid;grid-template-columns:1fr 92px 34px;gap:8px;margin-bottom:7px;align-items:center}
 .ingrow button{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);cursor:pointer;height:36px}
 .ingrow button:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
+.bprow{display:grid;grid-template-columns:1fr 108px 72px 34px;gap:8px;margin-bottom:7px;align-items:center}
+@media(max-width:560px){.bprow{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  .bprow .bp-n{grid-column:1/-1}}
+.bprow button{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);cursor:pointer;height:36px}
+.bprow button:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
+.bprow input:disabled{opacity:.35}
 
 /* ---------- planner ---------- */
 .plan{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
@@ -375,6 +383,7 @@ details.fold summary .tiny{letter-spacing:0;text-transform:none;font-weight:500}
 
 <datalist id="dlItems"></datalist>
 <datalist id="dlCraft"></datalist>
+<datalist id="dlBp"></datalist>
 
 <script>
 /* =====================================================================
@@ -681,6 +690,11 @@ function reindex(){
   for(const it of S.items) S.byName.set(norm(it.name), it);
 }
 const isCraftable = it => !!(it && it.ingredients && it.ingredients.length);
+const isBlueprint = it => !!(it && it.blueprint);
+const bpsOf = it => (it && it.blueprints) || [];
+// A blueprint you keep is owned or not; one that burns is counted like anything
+// else. Both ride on the same per-device on-hand numbers.
+const ownsBp = name => (S.stock[norm(name)]||0) > 0;
 const benchName = id => (S.benches.find(b=>b.id===id)||{}).name || "";
 const benchOf   = id => S.benches.find(b=>b.id===id) || null;
 
@@ -723,8 +737,17 @@ function rollup(rootName, qty, opts){
   const raw     = new Map();  // key -> {name, qty, item}
   const steps   = new Map();  // key -> {item, crafts, depth}
   const fromHave= new Map();  // key -> qty pulled from stock
+  const bps     = new Map();  // key -> {name, item, qty, unlock}
   const unknown = new Set();
   let loop = false;
+
+  function addBp(name, q, unlock, item){
+    const key = norm(name);
+    const e = bps.get(key) || { name:(item&&item.name)||name, item:item||null, qty:0, unlock:!!unlock };
+    if(unlock){ e.unlock = true; e.qty = Math.max(e.qty, 1); }   // one is one, however many you make
+    else e.qty += q;
+    bps.set(key, e);
+  }
 
   function takeStock(key, need){
     if(!useStock) return need;
@@ -747,6 +770,8 @@ function rollup(rootName, qty, opts){
 
     const it = S.byName.get(key);
     if(!it){ unknown.add(name); addRaw(key, name, need, null); return; }
+    // a blueprint isn't something you buy at the hardware store — own bucket
+    if(isBlueprint(it)){ addBp(it.name, need, false, it); return; }
     if(!isCraftable(it)){ addRaw(key, it.name, need, it); return; }
     if(path.has(key)){ loop = true; addRaw(key, it.name, need, it); return; }
     if(depth > 24){ loop = true; addRaw(key, it.name, need, it); return; }
@@ -758,6 +783,13 @@ function rollup(rootName, qty, opts){
     s.depth   = Math.max(s.depth, depth);
     steps.set(key, s);
 
+    // blueprints this recipe needs — only once we know we're actually crafting it
+    for(const bp of bpsOf(it)){
+      if(!bp.name) continue;
+      if(bp.consumed) walk(bp.name, (num(bp.qty)||1) * crafts, depth+1, new Set(path));
+      else addBp(bp.name, 1, true, S.byName.get(norm(bp.name)));
+    }
+
     const p2 = new Set(path); p2.add(key);
     for(const ing of it.ingredients){
       const q = (num(ing.qty)||0) * crafts;
@@ -767,9 +799,14 @@ function rollup(rootName, qty, opts){
 
   walk(rootName, qty, 0, new Set());
 
-  // costs
+  // costs — consumed blueprints are a real spend, unlocks are a one-off you own
   let cost = 0, missingCost = 0;
   for(const [k,e] of raw){
+    const c = e.item ? num(e.item.buyCost) : null;
+    if(c==null) missingCost++; else cost += c*e.qty;
+  }
+  for(const [k,e] of bps){
+    if(e.unlock) continue;
     const c = e.item ? num(e.item.buyCost) : null;
     if(c==null) missingCost++; else cost += c*e.qty;
   }
@@ -782,6 +819,7 @@ function rollup(rootName, qty, opts){
   return {
     raw:[...raw.values()].sort((a,b)=>a.name.localeCompare(b.name)),
     steps:[...steps.values()].sort((a,b)=> b.depth-a.depth || a.item.name.localeCompare(b.item.name)),
+    blueprints:[...bps.values()].sort((a,b)=>a.name.localeCompare(b.name)),
     fromHave, unknown:[...unknown], loop, cost, missingCost, time, missingTime
   };
 }
@@ -790,7 +828,8 @@ function rollup(rootName, qty, opts){
 function rollupMany(targets, opts){
   const merged = { raw:new Map(), steps:new Map(), fromHave:new Map(), unknown:new Set(), loop:false, cost:0, missingCost:0, time:0, missingTime:0 };
   // Do it as one walk so shared sub-components and stock are pooled correctly.
-  const fake = { name:"__plan__", outputQty:1, craftTime:0, ingredients: targets.map(t=>({name:t.name, qty:t.qty})) };
+  const fake = { name:"__plan__", outputQty:1, craftTime:0, blueprints:[],
+                 ingredients: targets.map(t=>({name:t.name, qty:t.qty})) };
   S.byName.set("__plan__", fake);
   const r = rollup("__plan__", 1, opts);
   S.byName.delete("__plan__");
@@ -819,6 +858,7 @@ function gapsOf(it){
     if(S.money && num(it.sellPrice)==null) g.push("no sell price");
     // an ingredient that doesn't exist can't be costed or broken down
     for(const ing of it.ingredients){ if(!S.byName.get(norm(ing.name))) g.push("unknown: "+ing.name); }
+    for(const bp of bpsOf(it)){ if(bp.name && !S.byName.get(norm(bp.name))) g.push("unknown blueprint: "+bp.name); }
   }else{
     if(S.money && num(it.buyCost)==null) g.push("no cost");   // breaks cost totals
   }
@@ -847,6 +887,13 @@ function closeModal(){
   document.body.style.overflow="";
 }
 $("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
+// a quantity only means anything for a blueprint that gets used up
+document.addEventListener("change", e=>{
+  const sel = e.target.closest(".bp-c");
+  if(!sel) return;
+  const q = sel.parentElement.querySelector(".bp-q");
+  if(q) q.disabled = sel.value !== "1";
+});
 document.addEventListener("keydown", e=>{
   if(e.key==="Escape"){
     const lb = $(".lightbox");
@@ -870,7 +917,8 @@ function filtered(){
     if(S.fBench && it.benchId!==S.fBench) return false;
     if(S.fCat && it.category!==S.fCat) return false;
     if(S.fFlag==="craft" && !isCraftable(it)) return false;
-    if(S.fFlag==="raw" && isCraftable(it)) return false;
+    if(S.fFlag==="raw" && (isCraftable(it) || isBlueprint(it))) return false;
+    if(S.fFlag==="bp" && !isBlueprint(it)) return false;
     if(S.fFlag==="gaps" && gapsOf(it).length===0) return false;
     if(S.fFlag==="nosrc" && !noSource(it)) return false;
     if(!q) return true;
@@ -902,6 +950,7 @@ function viewCatalogue(){
     <button class="chip ${S.fFlag===""?"on":""}" data-flag="">Everything <span class="tiny">${S.items.length}</span></button>
     <button class="chip ${S.fFlag==="craft"?"on":""}" data-flag="craft">Craftable</button>
     <button class="chip ${S.fFlag==="raw"?"on":""}" data-flag="raw">Materials</button>
+    ${S.items.some(isBlueprint)? `<button class="chip ${S.fFlag==="bp"?"on":""}" data-flag="bp">Blueprints <span class="tiny">${S.items.filter(isBlueprint).length}</span></button>`:""}
     ${gapCount? `<button class="chip warnchip ${S.fFlag==="gaps"?"on":""}" data-flag="gaps">Needs attention <span class="tiny">${gapCount}</span></button>`:""}
     ${srcCount? `<button class="chip ${S.fFlag==="nosrc"?"on":""}" data-flag="nosrc">No source yet <span class="tiny">${srcCount}</span></button>`:""}
     ${cats.map(c=>`<button class="chip ${S.fCat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
@@ -917,7 +966,8 @@ function itemCard(it){
   const craft = isCraftable(it);
   const gaps  = gapsOf(it);
   let badge = "";
-  if(!craft) badge = `<span class="badge raw">MATERIAL</span>`;
+  if(isBlueprint(it)) badge = `<span class="badge bp">BLUEPRINT</span>`;
+  else if(!craft) badge = `<span class="badge raw">MATERIAL</span>`;
   else{
     if(S.money){
       const e = itemEconomics(it);
@@ -943,6 +993,7 @@ function itemCard(it){
       ${it.category? `<span class="tag">${esc(it.category)}</span>`:""}
       ${num(it.craftTime)!=null? `<span class="tag">${dur(it.craftTime)}</span>`:""}
       ${it.levelReq? `<span class="tag">lvl ${esc(it.levelReq)}</span>`:""}
+      ${bpsOf(it).length? `<span class="tag tbp">◆ blueprint${bpsOf(it).length>1?"s":""}</span>`:""}
     </div>
     ${ings}
   </div>`;
@@ -1046,6 +1097,9 @@ function viewPlanner(){
       <div class="stats">
         <div class="stat"><div class="k">Materials to get</div><div class="v">${shop.filter(x=>x.qty>0).length}</div></div>
         <div class="stat"><div class="k">Crafts to run</div><div class="v">${r.steps.reduce((a,s)=>a+s.crafts,0)}</div></div>
+        ${r.blueprints.length? `<div class="stat"><div class="k">Blueprints</div>
+          <div class="v ${r.blueprints.every(bp=>ownsBp(bp.name))?"good":"bad"}">${r.blueprints.filter(bp=>ownsBp(bp.name)).length}/${r.blueprints.length}</div>
+          <div class="tiny muted">you own</div></div>`:""}
         ${S.money? `<div class="stat"><div class="k">Est. cost</div><div class="v gold">${r.missingCost? "—" : money(r.cost)}</div>
           ${r.missingCost?`<div class="tiny muted">${r.missingCost} missing price${r.missingCost>1?"s":""}</div>`:""}</div>`:""}
         <div class="stat"><div class="k">Craft time</div><div class="v">${r.missingTime? "—" : dur(r.time)}</div>
@@ -1059,6 +1113,26 @@ function viewPlanner(){
       ${r.loop? `<div class="card" style="border-color:rgba(248,113,113,.35);margin-bottom:16px">
         <div class="sec-title" style="color:var(--bad)">Recipe loop detected</div>
         <div class="tiny">Something references itself down the chain. It's been treated as raw so the maths still works.</div>
+      </div>`:""}
+
+      ${r.blueprints.length? `<div class="card" style="margin-bottom:16px">
+        <div class="sec-title">Blueprints needed</div>
+        <div class="tscroll"><table>
+          <thead><tr><th>Blueprint</th><th class="num">Need</th><th>Type</th><th class="num">Got it</th><th>Where from</th></tr></thead>
+          <tbody>${r.blueprints.map(bp=>{
+            const have = ownsBp(bp.name);
+            return `<tr>
+              <td>${esc(bp.name)}${bp.item?"":' <span class="tag" style="color:var(--warn)">new</span>'}</td>
+              <td class="num mono" style="font-weight:700">${bp.unlock? "1" : bp.qty}</td>
+              <td class="tiny muted">${bp.unlock? "unlock — keep it" : "used up each craft"}</td>
+              <td class="num"><input type="checkbox" data-ownbp="${esc(bp.name)}" ${have?"checked":""} style="width:auto"></td>
+              <td class="tiny muted">${bp.item&&bp.item.source? esc(bp.item.source):"—"}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>
+        ${r.blueprints.some(bp=>!ownsBp(bp.name))
+          ? `<div class="tiny" style="color:var(--warn);margin-top:10px">You're missing ${r.blueprints.filter(bp=>!ownsBp(bp.name)).map(bp=>esc(bp.name)).join(", ")} — you can't run this without ${r.blueprints.filter(bp=>!ownsBp(bp.name)).length>1?"them":"it"}.</div>`
+          : `<div class="tiny" style="color:var(--acc);margin-top:10px">You have every blueprint this needs.</div>`}
       </div>`:""}
 
       <div class="card" style="margin-bottom:16px">
@@ -1495,6 +1569,20 @@ function openItem(id){
       ${gaps.length? `<div class="card" style="border-color:rgba(251,191,36,.3);margin-bottom:18px;padding:11px 13px">
         <div class="tiny" style="color:var(--warn);font-weight:700">Missing: ${gaps.map(esc).join(" · ")}</div></div>`:""}
       ${direct}
+      ${craft && bpsOf(it).length? `
+      <div class="sec-title">Blueprints required</div>
+      <div class="tree" style="margin-bottom:18px">
+        ${bpsOf(it).map(bp=>{
+          const sub = S.byName.get(norm(bp.name));
+          const have = ownsBp(bp.name);
+          return `<div class="tnode ${sub?"":"unknown"}">
+            <span class="q">${bp.consumed? esc(String(bp.qty||1))+"\u00d7" : "\u25c6"}</span>
+            <span class="nm ${sub?"craftable":""}" ${sub?`data-id="${sub.id}"`:""}>${esc(bp.name)}</span>
+            <span class="meta">${bp.consumed? "used up each craft"
+              : (have? `<span style="color:var(--acc)">owned</span>` : `<span style="color:var(--warn)">not owned</span>`)}</span>
+          </div>`;
+        }).join("")}
+      </div>`:""}
       ${deep}
       ${it.source&&!craft? `<div class="sec-title">Where to get it</div><div style="margin-bottom:18px">${esc(it.source)}</div>`:""}
       ${it.notes? `<div class="sec-title">Notes</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(it.notes)}</div>`:""}
@@ -1536,6 +1624,16 @@ function openEdit(id){
       <button class="btn sm ghost" id="addIng">+ Add ingredient</button>
       <div class="tiny muted" style="margin-top:7px">Anything you name that isn't already listed gets added as a raw material automatically.</div>
 
+      <details class="fold" ${(d.blueprints||[]).length?"open":""} style="margin-top:18px">
+        <summary>Blueprints <span class="muted tiny">— optional, only some items need one</span></summary>
+        <div id="bpList" style="margin-top:12px">${(d.blueprints||[]).map(bpRow).join("")}</div>
+        <button class="btn sm ghost" id="addBp" type="button">+ Add blueprint</button>
+        <div class="tiny muted" style="margin-top:7px">
+          <b>Unlock</b> = you own it once and can craft forever. <b>Used up</b> = one goes every craft,
+          so the planner counts them. Blueprints you name get added to the catalogue automatically.
+        </div>
+      </details>
+
       <div class="sec-title" style="margin-top:22px">Crafting</div>
       <div class="grid3" style="margin-bottom:12px">
         <div><label class="f">Bench</label><select id="e_bench">
@@ -1568,8 +1666,22 @@ function openEdit(id){
   $("#modalHost").dataset.editId = it? it.id : "";
   refreshDatalist();
   $("#addIng").onclick = ()=>{ $("#ingList").insertAdjacentHTML("beforeend", ingRow({name:"",qty:1})); };
+  $("#addBp").onclick = ()=>{ $("#bpList").insertAdjacentHTML("beforeend", bpRow({name:"",qty:1,consumed:false})); };
   $("#saveItem").onclick = ()=>saveItemForm(it);
 }
+function bpRow(g){
+  const c = !!g.consumed;
+  return `<div class="bprow">
+    <input class="bp-n" list="dlBp" value="${esc(g.name||"")}" placeholder="Blueprint name">
+    <select class="bp-c">
+      <option value="0" ${c?"":"selected"}>Unlock</option>
+      <option value="1" ${c?"selected":""}>Used up</option>
+    </select>
+    <input class="bp-q" type="number" min="1" step="1" value="${g.qty??1}" title="How many per craft" ${c?"":"disabled"}>
+    <button type="button" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+}
+
 function ingRow(g){
   return `<div class="ingrow">
     <input class="ing-n" list="dlItems" value="${esc(g.name||"")}" placeholder="Ingredient name">
@@ -1587,6 +1699,13 @@ async function saveItemForm(existing){
     qty:  num(r.querySelector(".ing-q").value) || 0
   })).filter(g=>g.name);
 
+  const bps = $$("#bpList .bprow").map(r=>{
+    const consumed = r.querySelector(".bp-c").value === "1";
+    return { name: r.querySelector(".bp-n").value.trim(),
+             consumed,
+             qty: consumed ? Math.max(1, parseInt(r.querySelector(".bp-q").value)||1) : 1 };
+  }).filter(g=>g.name);
+
   const dupe = S.items.find(x=>norm(x.name)===norm(name) && x.id!==(existing&&existing.id));
   if(dupe) return toast("Something's already called that",1);
 
@@ -1597,25 +1716,32 @@ async function saveItemForm(existing){
     craftTime: num($("#e_time").value), levelReq:$("#e_lvl").value.trim(), xp:num($("#e_xp").value),
     buyCost: num($("#e_buy").value), sellPrice: num($("#e_sell").value),
     source: $("#e_src").value.trim(), notes: $("#e_notes").value.trim(),
-    ingredients: ings
+    ingredients: ings, blueprints: bps,
+    blueprint: !!(existing && existing.blueprint)
   };
 
   try{
     const saved = await Store.saveItem(it);
     upsertLocal(saved);
 
-    // auto-create any ingredient that doesn't exist yet, as a raw material
+    // anything named that doesn't exist yet gets created — ingredients as raw
+    // materials, blueprints flagged as blueprints so they sort correctly
     let created = 0;
+    const stub = (nm, isBp) => ({
+      id:uid("it"), name:nm.trim(), category: isBp? "Blueprint":"", benchId:"", outputQty:1,
+      craftTime:null, levelReq:"", xp:null, buyCost:null, sellPrice:null,
+      source:"", notes:"", ingredients:[], blueprints:[], blueprint: !!isBp
+    });
     for(const g of ings){
       if(S.byName.get(norm(g.name))) continue;
-      const stub = { id:uid("it"), name:g.name.trim(), category:"", benchId:"", outputQty:1,
-                     craftTime:null, levelReq:"", xp:null, buyCost:null, sellPrice:null,
-                     source:"", notes:"", ingredients:[] };
-      upsertLocal(await Store.saveItem(stub));
-      created++;
+      upsertLocal(await Store.saveItem(stub(g.name, false))); created++;
+    }
+    for(const g of bps){
+      if(S.byName.get(norm(g.name))) continue;
+      upsertLocal(await Store.saveItem(stub(g.name, true))); created++;
     }
     closeModal(); render();
-    toast(created? `Saved — ${created} new material${created>1?"s":""} added` : "Saved");
+    toast(created? `Saved — ${created} new entr${created>1?"ies":"y"} added` : "Saved");
   }catch(err){ console.error(err); toast("Save failed: "+(err.message||err),1); }
 }
 function upsertLocal(it){
@@ -1914,6 +2040,9 @@ function refreshDatalist(){
   // dlItems is everything (ingredient autocomplete); dlCraft is only things you
   // can actually make, which is all the planner should ever suggest.
   $("#dlItems").innerHTML = S.items.map(i=>`<option value="${esc(i.name)}">`).join("");
+  $("#dlBp").innerHTML = S.items.filter(isBlueprint)
+    .slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .map(i=>`<option value="${esc(i.name)}">`).join("");
   $("#dlCraft").innerHTML = S.items.filter(isCraftable)
     .slice().sort((a,b)=>a.name.localeCompare(b.name))
     .map(i=>`<option value="${esc(i.name)}">`).join("");
@@ -1965,6 +2094,11 @@ function wireView(){
   $$("[data-trm]").forEach(b=> b.onclick = ()=>{ S.targets.splice(+b.dataset.trm,1); render(); });
   const pc = $("#planClear"); if(pc) pc.onclick = ()=>{ S.targets=[]; render(); };
   const us = $("#useStock"); if(us) us.onchange = ()=>{ S.useStock = us.checked; render(); };
+  $$("[data-ownbp]").forEach(c=> c.onchange = ()=>{
+    const k = norm(c.dataset.ownbp);
+    if(c.checked) S.stock[k] = Math.max(1, S.stock[k]||0); else delete S.stock[k];
+    saveStock(); render();
+  });
   $$("[data-stock]").forEach(i=> i.onchange = ()=>{
     const k = norm(i.dataset.stock);
     const v = Math.max(0, parseInt(i.value)||0);
