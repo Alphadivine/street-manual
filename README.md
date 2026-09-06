@@ -11,7 +11,7 @@ Street Manual is a single self-contained HTML file. No build step, no framework,
 own — it runs entirely in the browser and stores shared data in a free
 [Firebase Firestore](https://firebase.google.com/products/firestore) database.
 
-> **Live site:** https://alphadivine.github.io/street-manual/
+> **Live site:** _add your GitHub Pages URL here once deployed, e.g._ `https://yourname.github.io/street-manual/`
 
 ---
 
@@ -64,6 +64,22 @@ Tags (`heli-proof`, `needs 2 cars`, `night only`) become the filter chips at the
 
 ### Heists
 Crew size, gear, the hacks to expect and the steps. Details below.
+
+---
+
+## 📖 The built-in guide
+
+There's a **How to use** button in the header, and the guide **opens by itself the first time
+someone loads the page** on a given browser — the people who most need it are the ones who'd never
+click Help. It never appears again after that; the button reopens it any time.
+
+It covers what each tab is for, a worked example of the Planner, a legend for reading a card
+(MATERIAL / BLUEPRINT / gap badges, the ◆ blueprint mark, bench colours), how to search and filter,
+and the keyboard shortcuts.
+
+The guide **adapts to who's reading it**. A read-only viewer is told plainly why there's no **+**
+button and how to unlock editing; someone already unlocked gets the section on adding items,
+auto-created ingredients, craft-time units and pasting screenshots instead.
 
 ---
 
