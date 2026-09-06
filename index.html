@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Street Manual</title>
+<script type="module">
+// Firebase's official CDN build. Loads even when the keys below are blank —
+// it just isn't used, and the app runs on this device only.
+try{
+  const [{ initializeApp }, fs, au] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js"),
+    import("https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js")
+  ]);
+  window.__fb = { initializeApp,
+    getFirestore:fs.getFirestore, collection:fs.collection, doc:fs.doc,
+    getDoc:fs.getDoc, getDocs:fs.getDocs, setDoc:fs.setDoc, deleteDoc:fs.deleteDoc,
+    onSnapshot:fs.onSnapshot, writeBatch:fs.writeBatch,
+    getAuth:au.getAuth, signInAnonymously:au.signInAnonymously };
+}catch(err){
+  console.error("Firebase SDK failed to load", err);
+  window.__fbFailed = true;
+}
+window.dispatchEvent(new Event("fb-ready"));
+</script>
+<style>
+/* ============================== CONFIG NOTE ==============================
+   Scroll to the <script> at the bottom and edit the CONFIG block to set the
+   app name and (optionally) your Firebase config for shared crew mode.
+   ======================================================================== */
+
+:root{
+  --bg:#0a0c0f;
+  --bg2:#0e1116;
+  --panel:rgba(255,255,255,.045);
+  --panel2:rgba(255,255,255,.07);
+  --line:rgba(255,255,255,.10);
+  --line2:rgba(255,255,255,.18);
+  --txt:#e9edf2;
+  --dim:#93a0b0;
+  --dim2:#68758a;
+  --acc:#4ade80;
+  --acc2:#22d3ee;
+  --warn:#fbbf24;
+  --bad:#f87171;
+  --gold:#facc15;
+  --r:14px;
+  --shadow:0 8px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font:15px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+body::before{
+  content:"";position:fixed;inset:-30%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(45% 40% at 18% 8%, rgba(74,222,128,.13), transparent 62%),
+    radial-gradient(40% 38% at 88% 14%, rgba(34,211,238,.11), transparent 62%),
+    radial-gradient(50% 45% at 50% 100%, rgba(250,204,21,.06), transparent 60%);
+  filter:blur(20px);
+}
+a{color:var(--acc2);text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.13);border-radius:10px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 90px}
+header.top{
+  position:sticky;top:0;z-index:40;backdrop-filter:blur(16px);
+  background:linear-gradient(to bottom,rgba(10,12,15,.94),rgba(10,12,15,.78));
+  border-bottom:1px solid var(--line);
+}
+.topin{max-width:1240px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.02em;font-size:18px;white-space:nowrap}
+.brand .mark{
+  width:44px;height:52px;object-fit:contain;display:block;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.6));
+}
+@media(max-width:520px){.brand .mark{width:36px;height:42px}}
+.brand small{display:block;font-size:10px;font-weight:600;color:var(--dim2);letter-spacing:.14em;text-transform:uppercase;line-height:1}
+.spacer{flex:1}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;
+  padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--dim);
+  white-space:nowrap;
+}
+.pill.live{color:var(--acc);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.10)}
+.pill.solo{color:var(--warn);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.08)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+
+nav.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 16px 10px;max-width:1240px;margin:0 auto}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{
+  background:transparent;border:1px solid transparent;color:var(--dim);
+  padding:7px 14px;border-radius:999px;cursor:pointer;font-weight:650;font-size:13.5px;white-space:nowrap;
+  transition:.15s;
+}
+nav.tabs button:hover{color:var(--txt);background:var(--panel)}
+nav.tabs button.on{background:var(--panel2);border-color:var(--line2);color:var(--txt)}
+nav.tabs button .n{font-size:11px;color:var(--dim2);margin-left:5px}
+
+/* ---------- generic bits ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.btn{
+  background:var(--panel2);border:1px solid var(--line2);color:var(--txt);
+  padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:650;font-size:13.5px;transition:.15s;
+}
+.btn:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.28)}
+.btn.primary{background:linear-gradient(140deg,var(--acc),#2fbf6b);border-color:transparent;color:#06120c}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad);border-color:rgba(248,113,113,.3)}
+.btn.danger:hover{background:rgba(248,113,113,.12)}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+input,select,textarea{
+  background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;
+  padding:9px 11px;width:100%;outline:none;font-size:16px;transition:.15s;
+}
+@media(min-width:700px){input,select,textarea{font-size:14px}}
+input:focus,select:focus,textarea:focus{border-color:rgba(74,222,128,.55);background:rgba(0,0,0,.4)}
+textarea{resize:vertical;min-height:64px}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2393a0b0'/></svg>");background-repeat:no-repeat;background-position:right 11px center;padding-right:28px}
+label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-transform:uppercase;letter-spacing:.08em;margin:0 0 5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:620px){.grid3{grid-template-columns:1fr 1fr}}
+
+.muted{color:var(--dim)}
+.tiny{font-size:12px}
+.mono{font-variant-numeric:tabular-nums}
+.empty{text-align:center;padding:56px 20px;color:var(--dim2)}
+.empty .big{font-size:40px;margin-bottom:10px;opacity:.5}
+.sec-title{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);margin:0 0 10px}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.search{position:relative;flex:1;min-width:190px}
+.search input{padding-left:34px}
+.search .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim2);pointer-events:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;
+  color:var(--dim);cursor:pointer;font-size:12.5px;font-weight:600;transition:.15s;
+}
+.chip:hover{color:var(--txt);border-color:var(--line2)}
+.chip.on{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.4);color:var(--acc)}
+.chip.warnchip.on{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.4);color:var(--warn)}
+
+/* ---------- item grid ---------- */
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.item{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
+  cursor:pointer;transition:.15s;position:relative;overflow:hidden;
+}
+.item:hover{border-color:var(--line2);background:var(--panel2);transform:translateY(-1px)}
+.item .nm{font-weight:700;font-size:14.5px;margin-bottom:3px;padding-right:52px}
+.item .sub{font-size:12px;color:var(--dim2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item .ing{margin-top:9px;font-size:12.5px;color:var(--dim);line-height:1.45}
+.item .ing b{color:var(--txt);font-weight:600}
+.item .badge{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:6px}
+.badge.raw{background:rgba(148,163,184,.16);color:#94a3b8}
+.badge.prof{background:rgba(74,222,128,.14);color:var(--acc)}
+.badge.loss{background:rgba(248,113,113,.14);color:var(--bad)}
+.badge.gap{background:rgba(251,191,36,.14);color:var(--warn)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--dim)}
+.tag.tbench{background:rgba(34,211,238,.12);color:var(--acc2)}
+
+/* ---------- modal ---------- */
+.overlay{
+  position:fixed;inset:0;z-index:100;background:rgba(4,6,9,.72);backdrop-filter:blur(7px);
+  display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto;
+}
+.overlay[hidden]{display:none!important}
+.modal{
+  width:100%;max-width:760px;background:linear-gradient(180deg,#12161c,#0d1116);
+  border:1px solid var(--line2);border-radius:18px;box-shadow:var(--shadow);
+  animation:pop .18s ease-out;
+}
+.modal.wide{max-width:920px}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+.mhead{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.mhead h2{margin:0;font-size:19px;font-weight:800}
+.mhead .sub{font-size:12.5px;color:var(--dim2);margin-top:3px}
+.mbody{padding:18px 20px}
+.mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.x{background:transparent;border:none;color:var(--dim2);font-size:24px;cursor:pointer;line-height:1;padding:0 2px}
+.x:hover{color:var(--txt)}
+
+/* ---------- tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim2);font-weight:800;padding:0 8px 7px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ---------- recipe tree ---------- */
+.tree{font-size:13.5px}
+.tnode{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.tnode:last-child{border-bottom:none}
+.tnode .q{font-weight:800;color:var(--acc);min-width:46px;font-variant-numeric:tabular-nums}
+.tnode .nm{flex:1}
+.tnode .nm.craftable{color:var(--acc2);cursor:pointer}
+.tnode .nm.craftable:hover{text-decoration:underline}
+.tnode .meta{font-size:11.5px;color:var(--dim2)}
+.tnode.unknown .nm{color:var(--warn)}
+
+/* ---------- ingredient rows ---------- */
+.ingrow{display:grid;grid-template-columns:1fr 92px 34px;gap:8px;margin-bottom:7px;align-items:center}
+.ingrow button{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);cursor:pointer;height:36px}
+.ingrow button:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
+
+/* ---------- planner ---------- */
+.plan{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.plan{grid-template-columns:1fr}}
+.target{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.target .nm{flex:1;font-weight:650;font-size:13.5px}
+.target input{width:64px;text-align:center;padding:5px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+.stat .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim2);font-weight:800}
+.stat .v{font-size:21px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.stat .v.good{color:var(--acc)}
+.stat .v.bad{color:var(--bad)}
+.stat .v.gold{color:var(--gold)}
+.benchgroup{margin-bottom:16px}
+.benchgroup h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.benchgroup h4 .step{width:22px;height:22px;border-radius:7px;background:rgba(34,211,238,.15);color:var(--acc2);display:grid;place-items:center;font-size:11px;font-weight:800}
+.benchgroup h4 .loc{font-size:11.5px;color:var(--dim2);font-weight:500}
+
+/* ---------- bench cards ---------- */
+.benches{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.bench{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px}
+.bench h3{margin:0 0 3px;font-size:16px;font-weight:750}
+.bench .loc{font-size:12.5px;color:var(--acc2);margin-bottom:9px}
+.bench .cnt{font-size:12px;color:var(--dim2)}
+.bench .list{margin-top:10px;display:flex;flex-wrap:wrap;gap:5px}
+.bench .list span{font-size:11.5px;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.055);cursor:pointer}
+.bench .list span:hover{background:rgba(255,255,255,.12)}
+
+/* ---------- spots (drop offs / bus blocks) ---------- */
+.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+.spot{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:.15s}
+.spot:hover{border-color:var(--line2);background:var(--panel2);transform:translateY(-1px)}
+.spot .thumb{position:relative;aspect-ratio:16/9;background:rgba(0,0,0,.35);display:grid;place-items:center;font-size:34px;opacity:.95}
+.spot .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.spot .thumb .count{
+  position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:800;
+  background:rgba(0,0,0,.65);border:1px solid var(--line2);padding:2px 7px;border-radius:999px;
+}
+.spot .body{padding:12px 13px}
+.spot .nm{font-weight:700;font-size:14.5px;margin-bottom:3px}
+.spot .area{font-size:12.5px;color:var(--acc2);margin-bottom:5px}
+.spot .blocks{font-size:12.5px;color:var(--warn);margin-bottom:5px}
+.spot .tagrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
+.shots img{width:100%;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;display:block}
+.shotedit{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.shotedit .sh{position:relative;width:104px;height:68px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+.shotedit .sh img{width:100%;height:100%;object-fit:cover;display:block}
+.shotedit .sh button{
+  position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:6px;border:none;
+  background:rgba(0,0,0,.7);color:#fff;cursor:pointer;font-size:11px;line-height:1;padding:0;
+}
+.dropzone{
+  border:1px dashed var(--line2);border-radius:12px;padding:20px;text-align:center;
+  color:var(--dim2);cursor:pointer;transition:.15s;background:rgba(0,0,0,.14);
+}
+.dropzone:hover,.dropzone.over{border-color:rgba(74,222,128,.6);color:var(--txt);background:rgba(74,222,128,.06)}
+
+.lightbox{
+  position:fixed;inset:0;z-index:300;background:rgba(3,5,8,.93);
+  display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;
+}
+.lightbox img{max-width:100%;max-height:100%;border-radius:10px}
+.lightbox .x{position:absolute;top:14px;right:20px;font-size:34px}
+
+/* ---------- fab ---------- */
+.fab{
+  position:fixed;right:20px;bottom:22px;z-index:50;
+  width:56px;height:56px;border-radius:18px;border:none;cursor:pointer;
+  background:linear-gradient(140deg,var(--acc),#2fbf6b);color:#06120c;font-size:28px;font-weight:300;
+  box-shadow:0 8px 26px rgba(74,222,128,.4);display:grid;place-items:center;
+  transition:.15s;
+}
+.fab:hover{transform:scale(1.05)}
+@media(max-width:700px){.fab{right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}}
+
+/* ---------- toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:#182029;border:1px solid var(--line2);border-radius:12px;padding:11px 18px;
+  z-index:200;opacity:0;pointer-events:none;transition:.22s;font-size:13.5px;font-weight:600;
+  box-shadow:var(--shadow);max-width:90vw;
+}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast.err{border-color:rgba(248,113,113,.5);color:#fecaca}
+
+.hidden{display:none!important}
+/* .fab sets display:grid, which would otherwise beat the browser's [hidden] rule */
+[hidden]{display:none!important}
+
+details.fold{border:1px solid var(--line);border-radius:12px;padding:10px 13px;background:rgba(0,0,0,.14)}
+details.fold summary{cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);list-style:none}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::before{content:"▸ ";color:var(--dim2)}
+details.fold[open] summary::before{content:"▾ "}
+details.fold summary:hover{color:var(--txt)}
+details.fold summary .tiny{letter-spacing:0;text-transform:none;font-weight:500}
+
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;font-size:14px}
+.switch input{width:auto;margin:0}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topin">
+    <div class="brand">
+      <img class="mark" id="brandMark" alt="">
+      <div>
+        <span id="brandName">Street Manual</span>
+        <small id="brandSub">crafting index</small>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="modePill"><span class="dot"></span><span id="modeTxt">loading…</span></span>
+    <button class="btn sm ghost" id="btnLock" hidden></button>
+    <button class="btn sm ghost" id="btnData">Data</button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<div class="wrap" id="view"></div>
+
+<button class="fab" id="fab" title="Add item / recipe">+</button>
+<div id="toast"></div>
+
+<div class="overlay" id="overlay" hidden><div id="modalHost"></div></div>
+
+<datalist id="dlItems"></datalist>
+<datalist id="dlCraft"></datalist>
+
+<script>
+/* =====================================================================
+   CONFIG — edit these two blocks
+   ===================================================================== */
+// The gang logo, embedded so the file stays self-contained.
+const LOGO     = "data:image/png;base64,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";
+const LOGO_FAV = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAhZElEQVR42s2beXRc1ZXuf/fWrXmUqspSSaXBkixL8owtZBtsMxgPDGFwmkD3M3MCPJI0dCckWYt0v7C6k24eeaHp9AMT5k4zxkw2Q8DYFtgxsi3ZsiYk25JVmkpTzXPduvf9Iava6SaAGfr1WauW/tAdzvnO3vvs79v7CnzNQxCE/E9V1fzvzFFZWSlZLRabXq93m0wmOZFM+nt7exPRaDR/oUajIZfLffXz+7oWLYoiiqL8p8UCuFwuccnixcU11dXna7TaKz7u6bnY5/N5EokEAKWlpZlLNlxy0Ol0/es777z96q5d70+qqoogzEz3k5753waA2YXPDkmSmDt3rra8vMxd6ilZuO7CCy7zj4xeNjQ6Wp1KJfF6y1i+fDmVlZVotVo5GAxy5MgRad++/Wg0GsrLyxAE9an29o4fvf3225Of9I7/FgDMmvjsoi+99NLiutraq6qqq69OJJPnx2JRkyRpOXz4MIqqUllRkbnzzjuVmpoaSRAEURAE8cznqaqqHD1yVH7xpRfF93fvlirKy2loqN/6y1/+n98mEomvDAThq178po0byn/4gx/+sq2t7ZttR48hChp0eolgMJBpbW1Vli1bJqbTaemmm24Us1mZsbExJElCEARkWcZmszF//nwWLlyIy+VCVRUefvif5b/9279RSkpKdTffeONTDz388LdHR0dzXwUImq9q8Uajkdtv//YdV1159a7nX3y54dFtj2UsFnNOEFV1aMjH4cOt0urVq6W9e/dqCgsLBZfLjdfrZf78+dTW1jJ//ny8Xi92u53R0VF27tzJ4OAgS5cuo7KyUpyYmNS8++67ifb29nPv+at7lnd0dLwQi8VUURS/0phw1osH0Ov1/PVf3f3zf3roV+r69euTQLa+foG6du06denSparRaFSvu+46tbS0VP3Zz36mDg8Pq5814vG4+utf/1q966671HA4rD7x5JNqbW2tCsSLi4vVBx74x0d0Ol3+hPn/YgGz6N96y813Ol3uf/jDRwcSb7/9ttFgMIoORwGCAG1tbWy55hq6Ojv58Y9/zJ133okAhMNhstksuVyOeDxOPB4nkUiQzWZRVRVJkmg6t4nBwVM89fTTrF61iv6T/Zw8eUIbjUYTk5NTq2655cae5uYPu76M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";
+
+const CONFIG = {
+  APP_NAME:  "Street Manual",  // shows in the header + browser tab
+  APP_SUB:   "unholy",         // small line under the name
+
+  // Leave blank = solo mode (saves on this device only).
+  // Paste your Firebase web-app config here = shared live mode for the crew.
+  // Firebase console → Project settings → Your apps → Web app → Config.
+  FIREBASE: {
+    apiKey:     "AIzaSyD_Pgx_ystRiuKUxVo0tPCHnakFbO3EC40",
+    authDomain: "street-manual-c5046.firebaseapp.com",
+    projectId:  "street-manual-c5046",
+    appId:      "1:33946532360:web:706bb6d82bbf24f4a2efbd"
+  },
+
+  BOARD_ID: "main"              // change to run a second, separate manual
+};
+/* ===================================================================== */
+
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const norm = s => (s||"").trim().toLowerCase();
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p+"_"+Date.now().toString(36)+"_"+Math.floor(Math.random()*1e6).toString(36);
+const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+
+function money(n){
+  if(n==null||!isFinite(n)) return "—";
+  const neg = n<0; n = Math.abs(n);
+  const s = n>=1000 ? Math.round(n).toLocaleString() : (Math.round(n*100)/100).toLocaleString();
+  return (neg?"-$":"$")+s;
+}
+function dur(sec){
+  if(sec==null||!isFinite(sec)||sec<=0) return "—";
+  if(sec<60) return Math.round(sec)+"s";
+  const m = Math.floor(sec/60), s = Math.round(sec%60);
+  if(m<60) return s? m+"m "+s+"s" : m+"m";
+  const h = Math.floor(m/60), mm = m%60;
+  return mm? h+"h "+mm+"m" : h+"h";
+}
+function toast(msg,err){
+  const t=$("#toast"); t.textContent=msg; t.className = err?"show err":"show";
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className="",2600);
+}
+
+/* =====================================================================
+   STORAGE — this device by default, Firestore when the keys are filled in
+   ===================================================================== */
+const BOARD = CONFIG.BOARD_ID || "main";
+
+let CLOUD = false;   // set in initCloud() once the Firebase SDK has loaded
+let FB    = null;    // the modular Firestore functions, off window.__fb
+let db    = null;
+let auth  = null;
+let myUid = null;
+
+const PFX = "streetManual:"+BOARD+":";
+const LK = { items:PFX+"items", benches:PFX+"benches", spots:PFX+"spots",
+             stock:PFX+"stock", money:PFX+"money" };
+const IMGK = id => PFX+"img:"+id;
+
+// The app used to be called Craft Vault — carry anything saved under the old
+// name across so a rename never costs someone their data.
+try{
+  for(const k of ["items","benches","spots","stock","money"]){
+    if(localStorage.getItem(PFX+k)==null){
+      const v = localStorage.getItem("craftVault:"+BOARD+":"+k);
+      if(v!=null) localStorage.setItem(PFX+k, v);
+    }
+  }
+}catch(e){}
+
+function configured(){
+  const f = CONFIG.FIREBASE||{};
+  return !!(f.projectId && f.apiKey);
+}
+function initCloud(){
+  if(!configured() || !window.__fb) return false;
+  try{
+    FB = window.__fb;
+    const app = FB.initializeApp(CONFIG.FIREBASE);
+    db = FB.getFirestore(app);
+    auth = FB.getAuth(app);
+    CLOUD = true;
+  }catch(err){ console.error("Firebase init failed", err); CLOUD = false; }
+  return CLOUD;
+}
+const col = n => FB.collection(db, "boards", BOARD, n);
+const ref = (n,id) => FB.doc(db, "boards", BOARD, n, id);
+
+/* ---------------------------------------------------------------------
+   Who can edit.
+   On your own device (no Firebase) everything is editable — locking your
+   own file would be pointless. In shared mode the manual opens read-only
+   and you unlock it with the crew's edit code. The browser signs in
+   anonymously so Firestore has a uid to hang the permission on, and the
+   rules check that uid — so this is enforced on the server, not just
+   hidden in the interface.
+   --------------------------------------------------------------------- */
+async function signIn(){
+  if(!CLOUD) return null;
+  const cred = await FB.signInAnonymously(auth);
+  myUid = cred.user.uid;
+  return myUid;
+}
+async function checkEditor(){
+  if(!CLOUD){ S.canEdit = true; return true; }
+  if(!myUid){ S.canEdit = false; return false; }
+  try{
+    const d = await FB.getDoc(FB.doc(db, "boards", BOARD, "editors", myUid));
+    S.canEdit = d.exists();
+  }catch(e){ S.canEdit = false; }
+  return S.canEdit;
+}
+async function claimEditor(code){
+  if(!CLOUD) return true;
+  if(!myUid) throw new Error("not signed in yet — reload and try again");
+  // The rules only let this write through when the code matches, so a wrong
+  // code comes back as a permission error rather than a silent success.
+  await FB.setDoc(FB.doc(db, "boards", BOARD, "editors", myUid), { code, at: Date.now() });
+  S.canEdit = true;
+  return true;
+}
+
+const Local = {
+  read(k){ try{ return JSON.parse(localStorage.getItem(k)) || [] }catch(e){ return [] } },
+  write(k,v){
+    try{ localStorage.setItem(k, JSON.stringify(v)) }
+    catch(e){ toast("This device is out of storage — remove some screenshots or switch to shared mode",1) }
+  }
+};
+function localBytes(){
+  let n = 0;
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(PFX)){ const v = localStorage.getItem(k); if(v) n += v.length; }
+    }
+  }catch(e){}
+  return n;
+}
+
+// Firestore rejects undefined, so every field goes out with a real value.
+function clean(o){
+  const out = {};
+  for(const k in o) out[k] = o[k]===undefined ? null : o[k];
+  return out;
+}
+
+const Store = {
+  async loadAll(){
+    if(!CLOUD) return { items:Local.read(LK.items), benches:Local.read(LK.benches), spots:Local.read(LK.spots) };
+    const [i,b,s] = await Promise.all([
+      FB.getDocs(col("items")), FB.getDocs(col("benches")), FB.getDocs(col("spots"))
+    ]);
+    const rows = snap => snap.docs.map(d=>({ ...d.data(), id:d.id }));
+    return { items:rows(i), benches:rows(b), spots:rows(s) };
+  },
+
+  async saveItem(it){ return this._save("items", LK.items, it); },
+  async saveBench(b){ return this._save("benches", LK.benches, b); },
+  async saveSpot(sp){ return this._save("spots", LK.spots, sp); },
+  async delItem(id){ return this._del("items", LK.items, id); },
+  async delBench(id){ return this._del("benches", LK.benches, id); },
+  async delSpot(id){ return this._del("spots", LK.spots, id); },
+
+  async _save(name, key, rec){
+    if(!CLOUD){
+      const all = Local.read(key);
+      const i = all.findIndex(x=>x.id===rec.id);
+      if(i>=0) all[i]=rec; else all.push(rec);
+      Local.write(key, all); return rec;
+    }
+    await FB.setDoc(ref(name, rec.id), clean({...rec, updatedAt: Date.now()}));
+    return rec;
+  },
+  async _del(name, key, id){
+    if(!CLOUD){ Local.write(key, Local.read(key).filter(x=>x.id!==id)); return }
+    await FB.deleteDoc(ref(name, id));
+  },
+
+  async replaceAll(items, benches, spots){
+    spots = spots||[];
+    imgCache.clear();
+    if(!CLOUD){
+      Local.write(LK.items,items); Local.write(LK.benches,benches); Local.write(LK.spots,spots);
+      try{
+        const dead = [];
+        for(let i=0;i<localStorage.length;i++){
+          const k = localStorage.key(i);
+          if(k && k.startsWith(PFX+"img:")) dead.push(k);
+        }
+        dead.forEach(k=>localStorage.removeItem(k));
+      }catch(e){}
+      return;
+    }
+    for(const name of ["items","benches","spots","images"]){
+      const snap = await FB.getDocs(col(name));
+      await commitAll(snap.docs.map(d=>({op:"del", ref:d.ref})));
+    }
+    await commitAll([
+      ...benches.map(b=>({op:"set", ref:ref("benches",b.id), data:clean(b)})),
+      ...items.map(  i=>({op:"set", ref:ref("items",i.id),   data:clean(i)})),
+      ...spots.map(  s=>({op:"set", ref:ref("spots",s.id),   data:clean(s)}))
+    ]);
+  },
+
+  subscribe(cb){
+    if(!CLOUD) return;
+    for(const name of ["items","benches","spots"]){
+      let seeded = false;   // each collection's first snapshot is the load, not a change
+      FB.onSnapshot(col(name), ()=>{ if(!seeded){ seeded = true; return; } cb(); },
+        err=>console.warn("live sync ("+name+"):", err.message));
+    }
+  }
+};
+
+// Firestore batches cap at 500 writes.
+async function commitAll(ops){
+  for(let i=0;i<ops.length;i+=450){
+    const batch = FB.writeBatch(db);
+    for(const o of ops.slice(i,i+450)){
+      if(o.op==="del") batch.delete(o.ref); else batch.set(o.ref, o.data);
+    }
+    await batch.commit();
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Screenshots.
+   A spot record carries only a small thumbnail; the full-size image lives
+   in its own record and is fetched when you actually open the spot. That
+   keeps the tab listing cheap no matter how many pictures pile up.
+   --------------------------------------------------------------------- */
+const imgCache = new Map();
+
+async function putImage(dataUrl){
+  const id = uid("img");
+  if(CLOUD) await FB.setDoc(ref("images", id), { data:dataUrl, at:Date.now() });
+  else localStorage.setItem(IMGK(id), dataUrl);
+  imgCache.set(id, dataUrl);
+  return id;
+}
+async function getImage(id){
+  if(imgCache.has(id)) return imgCache.get(id);
+  let v = "";
+  try{
+    if(CLOUD){ const d = await FB.getDoc(ref("images", id)); v = d.exists()? (d.data().data||"") : ""; }
+    else v = localStorage.getItem(IMGK(id)) || "";
+  }catch(e){ console.warn("image load failed", e.message); }
+  imgCache.set(id, v);
+  return v;
+}
+async function dropImage(id){
+  imgCache.delete(id);
+  try{
+    if(CLOUD) await FB.deleteDoc(ref("images", id));
+    else localStorage.removeItem(IMGK(id));
+  }catch(e){}
+}
+
+// An image entry is {src:"https://…"} for a link, {id, thumb} for an upload.
+// Plain strings are the original format and still work.
+const imgThumb = e => !e ? "" : (typeof e==="string" ? e : (e.thumb || e.src || ""));
+const imgId    = e => (e && typeof e==="object" && e.id) ? e.id : null;
+async function imgFull(e){
+  if(!e) return "";
+  if(typeof e==="string") return e;
+  if(e.src) return e.src;
+  if(e.id)  return (await getImage(e.id)) || e.thumb || "";
+  return e.thumb || "";
+}
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const S = {
+  items:[], benches:[], spots:[],
+  spotQ:"", spotTag:"",
+  canEdit:true,
+  byName:new Map(),
+  stock:{},           // on-hand counts — always local to this device
+  tab:"catalogue",
+  q:"", fBench:"", fCat:"", fFlag:"",
+  targets:[],         // planner: [{name, qty}]
+  useStock:true,
+  money:false         // money tracking is off by default — toggle in the Data panel
+};
+try{ S.stock = JSON.parse(localStorage.getItem(LK.stock)) || {} }catch(e){ S.stock={} }
+try{ S.money = localStorage.getItem(LK.money)==="1" }catch(e){}
+const saveStock = ()=>{ try{ localStorage.setItem(LK.stock, JSON.stringify(S.stock)) }catch(e){} };
+const saveMoney = ()=>{ try{ localStorage.setItem(LK.money, S.money?"1":"0") }catch(e){} };
+
+function reindex(){
+  S.byName = new Map();
+  for(const it of S.items) S.byName.set(norm(it.name), it);
+}
+const isCraftable = it => !!(it && it.ingredients && it.ingredients.length);
+const benchName = id => (S.benches.find(b=>b.id===id)||{}).name || "";
+const benchOf   = id => S.benches.find(b=>b.id===id) || null;
+
+/* =====================================================================
+   THE ENGINE — recursive raw-material rollup
+   ---------------------------------------------------------------------
+   Walks a recipe down through every sub-craft, honours output quantities
+   (a recipe that yields 5 only needs to run twice for 9), guards against
+   recipe loops, and can consume what you already have on hand.
+   ===================================================================== */
+function rollup(rootName, qty, opts){
+  opts = opts || {};
+  const useStock = !!opts.useStock;
+  const avail = new Map();
+  if(useStock) for(const k in S.stock){ if(S.stock[k]>0) avail.set(k, S.stock[k]); }
+
+  const raw     = new Map();  // key -> {name, qty, item}
+  const steps   = new Map();  // key -> {item, crafts, depth}
+  const fromHave= new Map();  // key -> qty pulled from stock
+  const unknown = new Set();
+  let loop = false;
+
+  function takeStock(key, need){
+    if(!useStock) return need;
+    const a = avail.get(key)||0;
+    if(a<=0) return need;
+    const used = Math.min(a, need);
+    avail.set(key, a-used);
+    fromHave.set(key, (fromHave.get(key)||0)+used);
+    return need-used;
+  }
+  function addRaw(key, name, q, item){
+    if(q<=0) return;
+    const e = raw.get(key) || {name, qty:0, item:item||null};
+    e.qty += q; raw.set(key, e);
+  }
+  function walk(name, need, depth, path){
+    const key = norm(name);
+    need = takeStock(key, need);
+    if(need<=0) return;
+
+    const it = S.byName.get(key);
+    if(!it){ unknown.add(name); addRaw(key, name, need, null); return; }
+    if(!isCraftable(it)){ addRaw(key, it.name, need, it); return; }
+    if(path.has(key)){ loop = true; addRaw(key, it.name, need, it); return; }
+    if(depth > 24){ loop = true; addRaw(key, it.name, need, it); return; }
+
+    const per    = Math.max(1, it.outputQty||1);
+    const crafts = Math.ceil(need/per);
+    const s = steps.get(key) || { item:it, crafts:0, depth:0 };
+    s.crafts += crafts;
+    s.depth   = Math.max(s.depth, depth);
+    steps.set(key, s);
+
+    const p2 = new Set(path); p2.add(key);
+    for(const ing of it.ingredients){
+      const q = (num(ing.qty)||0) * crafts;
+      if(q>0) walk(ing.name, q, depth+1, p2);
+    }
+  }
+
+  walk(rootName, qty, 0, new Set());
+
+  // costs
+  let cost = 0, missingCost = 0;
+  for(const [k,e] of raw){
+    const c = e.item ? num(e.item.buyCost) : null;
+    if(c==null) missingCost++; else cost += c*e.qty;
+  }
+  let time = 0, missingTime = 0;
+  for(const [k,s] of steps){
+    const t = num(s.item.craftTime);
+    if(t==null) missingTime++; else time += t*s.crafts;
+  }
+
+  return {
+    raw:[...raw.values()].sort((a,b)=>a.name.localeCompare(b.name)),
+    steps:[...steps.values()].sort((a,b)=> b.depth-a.depth || a.item.name.localeCompare(b.item.name)),
+    fromHave, unknown:[...unknown], loop, cost, missingCost, time, missingTime
+  };
+}
+
+// Roll up several targets at once (the planner).
+function rollupMany(targets, opts){
+  const merged = { raw:new Map(), steps:new Map(), fromHave:new Map(), unknown:new Set(), loop:false, cost:0, missingCost:0, time:0, missingTime:0 };
+  // Do it as one walk so shared sub-components and stock are pooled correctly.
+  const fake = { name:"__plan__", outputQty:1, craftTime:0, ingredients: targets.map(t=>({name:t.name, qty:t.qty})) };
+  S.byName.set("__plan__", fake);
+  const r = rollup("__plan__", 1, opts);
+  S.byName.delete("__plan__");
+  // Drop the synthetic root from the step list.
+  r.steps = r.steps.filter(s=>s.item.name!=="__plan__");
+  return r;
+}
+
+function itemEconomics(it){
+  if(!isCraftable(it)) return null;
+  const r = rollup(it.name, Math.max(1,it.outputQty||1), {useStock:false});
+  const sell = num(it.sellPrice);
+  const revenue = sell==null? null : sell*Math.max(1,it.outputQty||1);
+  const profit  = (revenue==null || r.missingCost>0) ? null : revenue - r.cost;
+  return { ...r, revenue, profit };
+}
+
+// "Needs attention" means the app will give you a wrong or incomplete answer —
+// not that an optional note is blank. A raw material with no source written
+// down still works perfectly everywhere, so it isn't flagged.
+function gapsOf(it){
+  const g = [];
+  if(isCraftable(it)){
+    if(!it.benchId) g.push("no bench");                       // breaks the bench route
+    if(num(it.craftTime)==null) g.push("no craft time");      // breaks time totals
+    if(S.money && num(it.sellPrice)==null) g.push("no sell price");
+    // an ingredient that doesn't exist can't be costed or broken down
+    for(const ing of it.ingredients){ if(!S.byName.get(norm(ing.name))) g.push("unknown: "+ing.name); }
+  }else{
+    if(S.money && num(it.buyCost)==null) g.push("no cost");   // breaks cost totals
+  }
+  return g;
+}
+
+// Not a problem, just untidy — its own quiet filter, no badge on the card.
+const noSource = it => !isCraftable(it) && !it.source;
+
+/* =====================================================================
+   MODALS
+   ===================================================================== */
+function openModal(html, cls){
+  const h = $("#modalHost");
+  // a modal replacing another must not leave the old paste handler bound
+  if(h._paste){ document.removeEventListener("paste", h._paste); h._paste = null; }
+  h.innerHTML = '<div class="modal '+(cls||"")+'">'+html+'</div>';
+  $("#overlay").hidden = false;
+  document.body.style.overflow="hidden";
+}
+function closeModal(){
+  const h = $("#modalHost");
+  if(h._paste){ document.removeEventListener("paste", h._paste); h._paste = null; }
+  $("#overlay").hidden = true;
+  h.innerHTML = "";
+  document.body.style.overflow="";
+}
+$("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
+document.addEventListener("keydown", e=>{
+  if(e.key==="Escape"){
+    const lb = $(".lightbox");
+    if(lb){ lb.remove(); return; }
+    if(!$("#overlay").hidden) closeModal();
+  }
+  if(e.key==="/" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)){
+    const s=$("#q"); if(s){ e.preventDefault(); s.focus(); }
+  }
+});
+
+/* =====================================================================
+   VIEW: CATALOGUE
+   ===================================================================== */
+function categories(){
+  return [...new Set(S.items.map(i=>i.category).filter(Boolean))].sort();
+}
+function filtered(){
+  const q = norm(S.q);
+  return S.items.filter(it=>{
+    if(S.fBench && it.benchId!==S.fBench) return false;
+    if(S.fCat && it.category!==S.fCat) return false;
+    if(S.fFlag==="craft" && !isCraftable(it)) return false;
+    if(S.fFlag==="raw" && isCraftable(it)) return false;
+    if(S.fFlag==="gaps" && gapsOf(it).length===0) return false;
+    if(S.fFlag==="nosrc" && !noSource(it)) return false;
+    if(!q) return true;
+    if(norm(it.name).includes(q)) return true;
+    if(norm(it.category).includes(q)) return true;
+    if(norm(benchName(it.benchId)).includes(q)) return true;
+    return (it.ingredients||[]).some(g=>norm(g.name).includes(q));
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+function viewCatalogue(){
+  const cats = categories();
+  const list = filtered();
+  const gapCount = S.items.filter(i=>gapsOf(i).length).length;
+  const srcCount = S.items.filter(noSource).length;
+
+  return `
+  <div class="toolbar">
+    <div class="search">
+      <span class="ico">⌕</span>
+      <input id="q" placeholder="Search items, ingredients, benches…  ( / )" value="${esc(S.q)}">
+    </div>
+    <select id="fBench" style="width:auto;min-width:150px">
+      <option value="">All benches</option>
+      ${S.benches.map(b=>`<option value="${b.id}" ${S.fBench===b.id?"selected":""}>${esc(b.name)}</option>`).join("")}
+    </select>
+  </div>
+  <div class="chips" style="margin:-6px 0 16px">
+    <button class="chip ${S.fFlag===""?"on":""}" data-flag="">Everything <span class="tiny">${S.items.length}</span></button>
+    <button class="chip ${S.fFlag==="craft"?"on":""}" data-flag="craft">Craftable</button>
+    <button class="chip ${S.fFlag==="raw"?"on":""}" data-flag="raw">Materials</button>
+    ${gapCount? `<button class="chip warnchip ${S.fFlag==="gaps"?"on":""}" data-flag="gaps">Needs attention <span class="tiny">${gapCount}</span></button>`:""}
+    ${srcCount? `<button class="chip ${S.fFlag==="nosrc"?"on":""}" data-flag="nosrc">No source yet <span class="tiny">${srcCount}</span></button>`:""}
+    ${cats.map(c=>`<button class="chip ${S.fCat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+  </div>
+  ${ list.length ? `<div class="items">${list.map(itemCard).join("")}</div>`
+    : `<div class="empty"><div class="big">⚒</div>
+        <div style="font-weight:700;color:var(--dim);margin-bottom:6px">${S.items.length? "Nothing matches that." : "Nothing in here yet."}</div>
+        <div class="tiny">${S.items.length? "Try clearing the filters." : (S.canEdit? "Hit the + button to add your first recipe. Ingredients you name get created automatically." : "Nothing has been added yet.")}</div>
+      </div>` }`;
+}
+
+function itemCard(it){
+  const craft = isCraftable(it);
+  const gaps  = gapsOf(it);
+  let badge = "";
+  if(!craft) badge = `<span class="badge raw">MATERIAL</span>`;
+  else{
+    if(S.money){
+      const e = itemEconomics(it);
+      if(e && e.profit!=null) badge = `<span class="badge ${e.profit>=0?"prof":"loss"}">${e.profit>=0?"+":""}${money(e.profit)}</span>`;
+    }
+    if(!badge && gaps.length) badge = `<span class="badge gap">${gaps.length} gap${gaps.length>1?"s":""}</span>`;
+  }
+  const ings = craft
+    ? `<div class="ing">${it.ingredients.slice(0,6).map(g=>`<b>${esc(String(g.qty??"?"))}×</b> ${esc(g.name)}`).join(" · ")}${it.ingredients.length>6?` <span class="muted">+${it.ingredients.length-6} more</span>`:""}</div>`
+    : (()=>{
+        // nothing to say about a bare material — an empty line reads better than
+        // "source not set" nagging from every card
+        const bits = [];
+        if(it.source) bits.push(esc(it.source));
+        if(S.money && num(it.buyCost)!=null) bits.push(money(it.buyCost)+" ea");
+        return bits.length? `<div class="ing muted">${bits.join(" · ")}</div>` : "";
+      })();
+  return `<div class="item" data-id="${it.id}">
+    ${badge}
+    <div class="nm">${esc(it.name)}${(it.outputQty||1)>1?` <span class="muted tiny">×${it.outputQty}</span>`:""}</div>
+    <div class="sub">
+      ${it.benchId? `<span class="tag tbench">${esc(benchName(it.benchId))}</span>`:""}
+      ${it.category? `<span class="tag">${esc(it.category)}</span>`:""}
+      ${num(it.craftTime)!=null? `<span class="tag">${dur(it.craftTime)}</span>`:""}
+      ${it.levelReq? `<span class="tag">lvl ${esc(it.levelReq)}</span>`:""}
+    </div>
+    ${ings}
+  </div>`;
+}
+
+/* =====================================================================
+   VIEW: BENCHES
+   ===================================================================== */
+function viewBenches(){
+  if(!S.benches.length) return `<div class="empty"><div class="big">🏭</div>
+    <div style="font-weight:700;color:var(--dim);margin-bottom:6px">No benches yet.</div>
+    <div class="tiny" style="margin-bottom:16px">Add every crafting bench in the city — then each recipe gets tagged to one.</div>
+    ${S.canEdit? `<button class="btn primary" id="addBench1">Add a bench</button>`:""}</div>`;
+
+  const unassigned = S.items.filter(i=>isCraftable(i) && !i.benchId);
+  return `
+  <div class="toolbar" style="justify-content:space-between">
+    <div class="sec-title" style="margin:0">${S.benches.length} bench${S.benches.length>1?"es":""}</div>
+    ${S.canEdit? `<button class="btn sm" id="addBench1">+ Add bench</button>`:""}
+  </div>
+  <div class="benches">
+    ${S.benches.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(b=>{
+      const mine = S.items.filter(i=>i.benchId===b.id).sort((x,y)=>x.name.localeCompare(y.name));
+      return `<div class="bench">
+        <h3>${esc(b.name)}</h3>
+        <div class="loc">${b.location? esc(b.location) : "<span class='muted'>location not set</span>"}</div>
+        <div class="cnt">${mine.length} recipe${mine.length===1?"":"s"}</div>
+        ${b.notes? `<div class="tiny muted" style="margin-top:7px">${esc(b.notes)}</div>`:""}
+        <div class="list">${mine.slice(0,14).map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}
+          ${mine.length>14?`<span class="muted">+${mine.length-14}</span>`:""}</div>
+        ${S.canEdit? `<div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn sm ghost" data-editbench="${b.id}">Edit</button>
+        </div>`:""}
+      </div>`;
+    }).join("")}
+  </div>
+  ${unassigned.length? `<div class="card" style="margin-top:16px;border-color:rgba(251,191,36,.3)">
+    <div class="sec-title" style="color:var(--warn)">${unassigned.length} recipe${unassigned.length>1?"s":""} with no bench assigned</div>
+    <div class="bench"><div class="list" style="margin:0">${unassigned.map(i=>`<span data-id="${i.id}">${esc(i.name)}</span>`).join("")}</div></div>
+  </div>`:""}`;
+}
+
+/* =====================================================================
+   VIEW: PLANNER
+   ===================================================================== */
+function viewPlanner(){
+  const r = S.targets.length ? rollupMany(S.targets,{useStock:S.useStock}) : null;
+
+  const left = `<div class="card">
+    <div class="sec-title">What are you making?</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <input id="planAdd" list="dlCraft" placeholder="What are you crafting?" style="flex:1">
+      <input id="planQty" type="number" min="1" value="1" style="width:70px;text-align:center">
+      <button class="btn primary" id="planAddBtn">Add</button>
+    </div>
+    ${S.targets.length? S.targets.map((t,i)=>`
+      <div class="target">
+        <span class="nm">${esc(t.name)}</span>
+        <input type="number" min="1" value="${t.qty}" data-tq="${i}">
+        <button class="btn sm ghost" data-trm="${i}">✕</button>
+      </div>`).join("") : `<div class="tiny muted">Add a few items and you'll get one combined materials list.</div>`}
+    ${S.targets.length? `<button class="btn sm ghost" id="planClear" style="margin-top:12px">Clear all</button>`:""}
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="useStock" ${S.useStock?"checked":""} style="width:auto">
+      Subtract what I already have
+    </label>
+  </div>`;
+
+  if(!r) return `<div class="plan">${left}<div class="empty"><div class="big">📋</div>
+    <div style="font-weight:700;color:var(--dim)">Nothing planned yet.</div>
+    <div class="tiny">Pick your items on the left.</div></div></div>`;
+
+  // Raw materials still needed, plus any that your stock already covers
+  // (kept visible so you can correct the count without hunting for it).
+  const shop = r.raw.filter(x=>x.qty>0);
+  for(const [k,v] of r.fromHave){
+    const it = S.byName.get(k);
+    if(isCraftable(it)) continue;                       // covered sub-craft, not a shopping row
+    if(shop.some(x=>norm(x.name)===k)) continue;
+    shop.push({ name:(it&&it.name)||k, qty:0, item:it||null });
+  }
+  shop.sort((a,b)=> (b.qty>0)-(a.qty>0) || a.name.localeCompare(b.name));
+  const groups = {};
+  for(const s of r.steps){
+    const k = s.item.benchId || "__none__";
+    (groups[k] = groups[k] || {depth:-1, steps:[]});
+    groups[k].steps.push(s);
+    groups[k].depth = Math.max(groups[k].depth, s.depth);
+  }
+  const order = Object.keys(groups).sort((a,b)=>groups[b].depth-groups[a].depth);
+
+  const right = `
+    <div>
+      <div class="stats">
+        <div class="stat"><div class="k">Materials to get</div><div class="v">${shop.filter(x=>x.qty>0).length}</div></div>
+        <div class="stat"><div class="k">Crafts to run</div><div class="v">${r.steps.reduce((a,s)=>a+s.crafts,0)}</div></div>
+        ${S.money? `<div class="stat"><div class="k">Est. cost</div><div class="v gold">${r.missingCost? "—" : money(r.cost)}</div>
+          ${r.missingCost?`<div class="tiny muted">${r.missingCost} missing price${r.missingCost>1?"s":""}</div>`:""}</div>`:""}
+        <div class="stat"><div class="k">Craft time</div><div class="v">${r.missingTime? "—" : dur(r.time)}</div>
+          ${r.missingTime?`<div class="tiny muted">${r.missingTime} missing</div>`:""}</div>
+      </div>
+
+      ${r.unknown.length? `<div class="card" style="border-color:rgba(251,191,36,.35);margin-bottom:16px">
+        <div class="sec-title" style="color:var(--warn)">Not in the manual yet</div>
+        <div class="tiny">${r.unknown.map(esc).join(", ")} — treated as raw materials. Add them to price them properly.</div>
+      </div>`:""}
+      ${r.loop? `<div class="card" style="border-color:rgba(248,113,113,.35);margin-bottom:16px">
+        <div class="sec-title" style="color:var(--bad)">Recipe loop detected</div>
+        <div class="tiny">Something references itself down the chain. It's been treated as raw so the maths still works.</div>
+      </div>`:""}
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="sec-title">Shopping list — raw materials</div>
+        <div class="tscroll"><table>
+          <thead><tr><th>Material</th><th class="num">${S.useStock?"Still need":"Need"}</th><th class="num">On hand</th>${S.money?'<th class="num">Cost</th>':""}<th>Source</th></tr></thead>
+          <tbody>${shop.map(x=>{
+            const k = norm(x.name);
+            const have = S.stock[k]||0;
+            const c = x.item? num(x.item.buyCost) : null;
+            return `<tr>
+              <td>${esc(x.name)}${x.item?"":' <span class="tag" style="color:var(--warn)">new</span>'}</td>
+              <td class="num mono" style="font-weight:700">${x.qty}</td>
+              <td class="num"><input type="number" min="0" value="${have}" data-stock="${esc(x.name)}" style="width:66px;text-align:center;padding:4px"></td>
+              ${S.money?`<td class="num mono">${c==null? '<span class="muted">—</span>' : money(c*x.qty)}</td>`:""}
+              <td class="tiny muted">${x.item&&x.item.source? esc(x.item.source):"—"}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>
+        ${r.fromHave.size? `<div class="tiny muted" style="margin-top:10px">Already covered from your stock: ${[...r.fromHave].map(([k,v])=>v+"× "+((S.byName.get(k)||{}).name||k)).join(", ")}</div>`:""}
+      </div>
+
+      <div class="card">
+        <div class="sec-title">Bench route — in order</div>
+        ${order.length? order.map((k,i)=>{
+          const b = benchOf(k);
+          return `<div class="benchgroup">
+            <h4><span class="step">${i+1}</span> ${b? esc(b.name) : "Bench not set"}
+              ${b&&b.location? `<span class="loc">${esc(b.location)}</span>`:""}</h4>
+            <div class="tscroll"><table>
+              <thead><tr><th>Craft</th><th class="num">Runs</th><th class="num">Yield</th><th class="num">Time</th></tr></thead>
+              <tbody>${groups[k].steps.map(s=>`<tr>
+                <td><span class="nm craftable" data-id="${s.item.id}" style="color:var(--acc2);cursor:pointer">${esc(s.item.name)}</span></td>
+                <td class="num mono">${s.crafts}</td>
+                <td class="num mono">${s.crafts*Math.max(1,s.item.outputQty||1)}</td>
+                <td class="num mono">${num(s.item.craftTime)!=null? dur(s.item.craftTime*s.crafts) : "—"}</td>
+              </tr>`).join("")}</tbody>
+            </table></div>
+          </div>`;
+        }).join("") : `<div class="tiny muted">Everything on your list is a raw material — nothing to craft.</div>`}
+      </div>
+    </div>`;
+
+  return `<div class="plan">${left}${right}</div>`;
+}
+
+/* =====================================================================
+   VIEW: SPOTS (drop offs / bus blocks)
+   ===================================================================== */
+const KIND = {
+  dropoff:  { label:"Drop Offs",  one:"drop off",  icon:"🚗",
+              blurb:"Where you ditch the hot car or swap into a clean one.",
+              nameHint:"e.g. Vespucci parking garage, level 3" },
+  busblock: { label:"Bus Blocks", one:"bus block", icon:"🚌",
+              blurb:"Spots to park something big and choke the road behind you.",
+              nameHint:"e.g. Tunnel mouth under Olympic" }
+};
+const spotsOf = k => S.spots.filter(s=>s.kind===k);
+const tagsOf  = k => [...new Set(spotsOf(k).flatMap(s=>s.tags||[]))].sort();
+
+function viewSpots(kind){
+  const K = KIND[kind];
+  const q = norm(S.spotQ);
+  let list = spotsOf(kind);
+  if(S.spotTag) list = list.filter(s=>(s.tags||[]).includes(S.spotTag));
+  if(q) list = list.filter(s =>
+    norm(s.name).includes(q) || norm(s.area).includes(q) ||
+    norm(s.notes).includes(q) || norm(s.blocks).includes(q) ||
+    (s.tags||[]).some(t=>norm(t).includes(q)));
+  list = list.slice().sort((a,b)=> (a.area||"~").localeCompare(b.area||"~") || a.name.localeCompare(b.name));
+
+  const tags = tagsOf(kind);
+  if(!spotsOf(kind).length) return `<div class="empty"><div class="big">${K.icon}</div>
+    <div style="font-weight:700;color:var(--dim);margin-bottom:6px">No ${K.label.toLowerCase()} saved yet.</div>
+    <div class="tiny" style="margin-bottom:16px">${K.blurb}</div>
+    ${S.canEdit? `<button class="btn primary" data-newspot="${kind}">Add a ${K.one}</button>`:""}</div>`;
+
+  return `
+  <div class="toolbar">
+    <div class="search">
+      <span class="ico">⌕</span>
+      <input id="sq" placeholder="Search ${K.label.toLowerCase()}…" value="${esc(S.spotQ)}">
+    </div>
+    ${S.canEdit? `<button class="btn sm" data-newspot="${kind}">+ Add ${K.one}</button>`:""}
+  </div>
+  ${tags.length? `<div class="chips" style="margin:-6px 0 16px">
+    <button class="chip ${S.spotTag===""?"on":""}" data-stag="">All <span class="tiny">${spotsOf(kind).length}</span></button>
+    ${tags.map(t=>`<button class="chip ${S.spotTag===t?"on":""}" data-stag="${esc(t)}">${esc(t)}</button>`).join("")}
+  </div>`:""}
+  ${list.length? `<div class="spots">${list.map(spotCard).join("")}</div>`
+   : `<div class="empty"><div class="tiny">Nothing matches that.</div></div>`}`;
+}
+
+function spotCard(s){
+  const img = imgThumb((s.images||[])[0]);
+  return `<div class="spot" data-spot="${s.id}">
+    <div class="thumb">${img? `<img src="${esc(img)}" alt="" loading="lazy">` : `<span>${KIND[s.kind].icon}</span>`}
+      ${(s.images||[]).length>1? `<span class="count">${s.images.length}</span>`:""}</div>
+    <div class="body">
+      <div class="nm">${esc(s.name)}</div>
+      ${s.area? `<div class="area">${esc(s.area)}</div>`:""}
+      ${s.blocks? `<div class="blocks">⛔ ${esc(s.blocks)}</div>`:""}
+      ${(s.tags||[]).length? `<div class="tagrow">${s.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
+    </div>
+  </div>`;
+}
+
+/* ---------- spot detail ---------- */
+function openSpot(id){
+  const s = S.spots.find(x=>x.id===id); if(!s) return;
+  const K = KIND[s.kind];
+  openModal(`
+    <div class="mhead">
+      <div style="flex:1"><h2>${K.icon} ${esc(s.name)}</h2>
+      <div class="sub">${s.area? esc(s.area) : K.label}</div></div>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="mbody">
+      ${(s.images||[]).length? `<div class="shots">${s.images.map((e,i)=>
+        `<img src="${esc(imgThumb(e))}" alt="" data-shot="${i}" data-spotid="${s.id}">`).join("")}</div>`:""}
+      ${s.blocks? `<div class="sec-title">Blocks</div><div style="margin-bottom:18px">⛔ ${esc(s.blocks)}</div>`:""}
+      ${s.vehicle? `<div class="sec-title">Needs</div><div style="margin-bottom:18px">${esc(s.vehicle)}</div>`:""}
+      ${s.notes? `<div class="sec-title">How to run it</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(s.notes)}</div>`:""}
+      ${(s.tags||[]).length? `<div class="sec-title">Tags</div><div class="chips">${s.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+    </div>
+    <div class="mfoot">
+      ${S.canEdit? `<button class="btn danger" data-delspot="${s.id}">Delete</button>`:""}
+      <div class="spacer"></div>
+      ${S.canEdit? `<button class="btn primary" data-editspot="${s.id}">Edit</button>`
+                 : `<button class="btn ghost" data-close>Close</button>`}
+    </div>`, "wide");
+
+  // thumbnails are what got rendered; pull the full-size versions in behind them
+  (s.images||[]).forEach(async (e,i)=>{
+    const full = await imgFull(e);
+    const el = $(`[data-shot="${i}"][data-spotid="${s.id}"]`);
+    if(el && full && el.src !== full) el.src = full;
+  });
+}
+
+function openShot(src){
+  if(!src) return;
+  const box = document.createElement("div");
+  box.className = "lightbox";
+  box.innerHTML = `<img src="${esc(src)}" alt=""><button class="x">×</button>`;
+  box.onclick = ()=>box.remove();
+  document.body.appendChild(box);
+}
+
+/* ---------- spot edit ---------- */
+function openSpotEdit(id, kind){
+  if(!S.canEdit) return toast("You need the edit code to change things",1);
+  const s = id ? S.spots.find(x=>x.id===id) : null;
+  const k = s? s.kind : kind;
+  const K = KIND[k];
+  const d = s || { name:"", area:"", blocks:"", vehicle:"", notes:"", tags:[], images:[] };
+
+  openModal(`
+    <div class="mhead"><div style="flex:1">
+      <h2>${s? "Edit":"New"} ${K.one}</h2>
+      <div class="sub">${K.blurb}</div></div>
+      <button class="x" data-close>×</button></div>
+    <div class="mbody">
+      <div style="margin-bottom:12px"><label class="f">Name *</label>
+        <input id="s_name" value="${esc(d.name)}" placeholder="${esc(K.nameHint)}" autofocus></div>
+      <div style="margin-bottom:12px"><label class="f">Area / landmark</label>
+        <input id="s_area" value="${esc(d.area)}" placeholder="Sandy Shores, behind the gas station off Route 68"></div>
+      ${k==="busblock"? `
+      <div class="grid2" style="margin-bottom:12px">
+        <div><label class="f">What it blocks</label><input id="s_blocks" value="${esc(d.blocks)}" placeholder="Northbound tunnel, both lanes"></div>
+        <div><label class="f">What you need</label><input id="s_veh" value="${esc(d.vehicle)}" placeholder="Bus, or any box truck"></div>
+      </div>` : `
+      <div style="margin-bottom:12px"><label class="f">What you need</label>
+        <input id="s_veh" value="${esc(d.vehicle)}" placeholder="Somewhere to stash a second car"></div>`}
+
+      <div class="sec-title" style="margin-top:18px">Screenshots</div>
+      <div class="dropzone" id="dz">
+        <div class="tiny">Click to pick a file, drag one in, or just paste (Ctrl/⌘ V)</div>
+        <input type="file" id="s_file" accept="image/*" multiple class="hidden">
+      </div>
+      <div style="display:flex;gap:8px;margin:8px 0 0">
+        <input id="s_url" placeholder="…or paste an image link (Discord, imgur)" style="flex:1">
+        <button class="btn sm" id="addUrl">Add</button>
+      </div>
+      <div class="shotedit" id="shots"></div>
+      <div class="tiny muted" id="shotInfo" style="margin-top:6px"></div>
+
+      <div style="margin:18px 0 12px"><label class="f">Tags</label>
+        <input id="s_tags" value="${esc((d.tags||[]).join(", "))}" placeholder="heli-proof, needs 2 cars, night only">
+        <div class="tiny muted" style="margin-top:5px">Comma separated. These become the filter chips.</div></div>
+
+      <div><label class="f">How to run it</label>
+        <textarea id="s_notes" placeholder="Come in from the west, back the bus across before the bend…">${esc(d.notes)}</textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Cancel</button>
+      <button class="btn primary" id="saveSpot">${s? "Save changes":"Add "+K.one}</button>
+    </div>`, "wide");
+
+  let shots = (d.images||[]).slice();
+
+  function paintShots(){
+    $("#shots").innerHTML = shots.map((e,i)=>
+      `<div class="sh"><img src="${esc(imgThumb(e))}" alt=""><button type="button" data-rm="${i}">✕</button></div>`).join("");
+    $$("#shots [data-rm]").forEach(b=> b.onclick = ()=>{ shots.splice(+b.dataset.rm,1); paintShots(); });
+    const bytes = shots.reduce((a,e)=> a + ((e && e._full)? e._full.length*0.75 : 0), 0);
+    const links = shots.filter(e=>e && e.src).length;
+    $("#shotInfo").textContent = shots.length
+      ? `${shots.length} image${shots.length>1?"s":""}`
+        + (links? ` · ${links} link${links>1?"s":""}`:"")
+        + (bytes? ` · about ${Math.round(bytes/1024)} KB to upload`:"")
+      : "";
+  }
+  paintShots();
+
+  async function addFiles(files){
+    for(const f of files){
+      if(!f || !f.type.startsWith("image/")) continue;
+      if(shots.length>=8){ toast("8 images is the limit per spot",1); break; }
+      try{
+        const {full, thumb} = await prepShot(f);
+        shots.push({ thumb, _full:full });
+      }catch(e){ toast("Couldn't read that image",1); }
+    }
+    paintShots();
+  }
+
+  const dz = $("#dz");
+  dz.onclick = ()=>$("#s_file").click();
+  $("#s_file").onchange = e=>addFiles([...e.target.files]);
+  dz.ondragover = e=>{ e.preventDefault(); dz.classList.add("over"); };
+  dz.ondragleave = ()=>dz.classList.remove("over");
+  dz.ondrop = e=>{ e.preventDefault(); dz.classList.remove("over"); addFiles([...e.dataTransfer.files]); };
+  $("#addUrl").onclick = ()=>{
+    const u = $("#s_url").value.trim();
+    if(!u) return;
+    if(!/^https?:\/\//i.test(u)) return toast("That doesn't look like a link",1);
+    shots.push({ src:u }); $("#s_url").value=""; paintShots();
+  };
+  // paste a screenshot straight in
+  $("#modalHost")._paste = e=>{
+    const files = [...(e.clipboardData&&e.clipboardData.files||[])];
+    if(files.length){ e.preventDefault(); addFiles(files); }
+  };
+  document.addEventListener("paste", $("#modalHost")._paste);
+
+  $("#saveSpot").onclick = async ()=>{
+    const name = $("#s_name").value.trim();
+    if(!name) return toast("Give it a name",1);
+    const rec = {
+      id: s? s.id : uid("sp"), kind:k, name,
+      area: $("#s_area").value.trim(),
+      blocks: $("#s_blocks")? $("#s_blocks").value.trim() : "",
+      vehicle: $("#s_veh")? $("#s_veh").value.trim() : "",
+      notes: $("#s_notes").value.trim(),
+      tags: $("#s_tags").value.split(",").map(x=>x.trim()).filter(Boolean),
+      images: []
+    };
+    const btn = $("#saveSpot");
+    btn.disabled = true; btn.textContent = "Saving…";
+    try{
+      // upload anything newly added, keep everything already stored as-is
+      for(const e of shots){
+        if(e && e._full){ rec.images.push({ id: await putImage(e._full), thumb: e.thumb }); }
+        else rec.images.push(e);
+      }
+      const saved = await Store.saveSpot(rec);
+      // and clear out images that were removed from this spot
+      const kept = new Set(rec.images.map(imgId).filter(Boolean));
+      for(const old of ((s&&s.images)||[])){
+        const id = imgId(old);
+        if(id && !kept.has(id)) await dropImage(id);
+      }
+      const i = S.spots.findIndex(x=>x.id===saved.id);
+      if(i>=0) S.spots[i]=saved; else S.spots.push(saved);
+      closeModal(); render(); toast("Saved");
+    }catch(err){
+      btn.disabled = false; btn.textContent = s? "Save changes":"Add "+K.one;
+      toast("Save failed: "+(err.message||err),1);
+    }
+  };
+}
+
+// Screenshots get downscaled before storing. You only need to recognise the
+// spot, a raw 4K grab would eat the storage budget on its own, and a Firestore
+// record caps out at 1 MB — so the full size is stepped down until it fits
+// comfortably, and a small thumbnail is kept alongside it for the listings.
+function fileToUrl(f){
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onerror = rej; fr.onload = ()=>res(fr.result); fr.readAsDataURL(f);
+  });
+}
+function loadImgEl(src){
+  return new Promise((res,rej)=>{
+    const i = new Image();
+    i.onerror = rej; i.onload = ()=>res(i); i.src = src;
+  });
+}
+function draw(img, max, q){
+  const sc = Math.min(1, max/Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.width*sc));
+  c.height = Math.max(1, Math.round(img.height*sc));
+  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", q);
+}
+async function prepShot(file){
+  const img = await loadImgEl(await fileToUrl(file));
+  let full = draw(img, 1400, .72);
+  for(const [max,q] of [[1400,.62],[1150,.58],[950,.52],[750,.45]]){
+    if(full.length <= 700000) break;
+    full = draw(img, max, q);
+  }
+  return { full, thumb: draw(img, 420, .58) };
+}
+
+/* =====================================================================
+   MODAL: ITEM DETAIL
+   ===================================================================== */
+function openItem(id){
+  const it = S.items.find(x=>x.id===id); if(!it) return;
+  const craft = isCraftable(it);
+  const e = craft ? itemEconomics(it) : null;
+  const usedIn = S.items.filter(x=>(x.ingredients||[]).some(g=>norm(g.name)===norm(it.name)));
+  const gaps = gapsOf(it);
+  const per = Math.max(1, it.outputQty||1);
+
+  const moneyStats = craft ? `
+      <div class="stat"><div class="k">Cost to craft</div><div class="v gold">${e.missingCost? "—":money(e.cost)}</div>
+        ${e.missingCost?`<div class="tiny muted">${e.missingCost} unpriced</div>`:""}</div>
+      <div class="stat"><div class="k">Sells for</div><div class="v">${e.revenue==null?"—":money(e.revenue)}</div>
+        ${per>1?`<div class="tiny muted">${per} units</div>`:""}</div>
+      <div class="stat"><div class="k">Profit</div><div class="v ${e.profit==null?"":(e.profit>=0?"good":"bad")}">${e.profit==null?"—":(e.profit>=0?"+":"")+money(e.profit)}</div></div>` : `
+      <div class="stat"><div class="k">Buy price</div><div class="v gold">${money(it.buyCost)}</div></div>
+      <div class="stat"><div class="k">Sell price</div><div class="v">${money(it.sellPrice)}</div></div>`;
+
+  const stats = craft ? `
+    <div class="stats" style="margin-bottom:18px">
+      ${S.money? moneyStats : ""}
+      <div class="stat"><div class="k">Total time</div><div class="v">${e.missingTime?"—":dur(e.time)}</div></div>
+      <div class="stat"><div class="k">Raw materials</div><div class="v">${e.raw.length}</div></div>
+      ${e.steps.length>1? `<div class="stat"><div class="k">Sub-crafts first</div><div class="v">${e.steps.length-1}</div></div>`:""}
+    </div>` : `
+    <div class="stats" style="margin-bottom:18px">
+      ${S.money? moneyStats : ""}
+      <div class="stat"><div class="k">On hand</div><div class="v">${S.stock[norm(it.name)]||0}</div></div>
+      <div class="stat"><div class="k">Used in</div><div class="v">${usedIn.length}</div></div>
+    </div>`;
+
+  const direct = craft ? `
+    <div class="sec-title">Recipe${per>1?` — makes ${per}`:""}</div>
+    <div class="tree" style="margin-bottom:18px">
+      ${it.ingredients.map(g=>{
+        const sub = S.byName.get(norm(g.name));
+        const isC = isCraftable(sub);
+        return `<div class="tnode ${sub?"":"unknown"}">
+          <span class="q">${esc(String(g.qty??"?"))}×</span>
+          <span class="nm ${sub?"craftable":""}" ${sub?`data-id="${sub.id}"`:""}>${esc(g.name)}</span>
+          <span class="meta">${!sub? "not listed" : isC? "craft @ "+(benchName(sub.benchId)||"?") : (sub.source||"material")}</span>
+        </div>`;
+      }).join("")}
+    </div>` : "";
+
+  const deep = (craft && e.steps.length>1) ? `
+    <div class="sec-title">Raw materials, all the way down</div>
+    <div class="tscroll" style="margin-bottom:18px"><table>
+      <thead><tr><th>Material</th><th class="num">Qty</th>${S.money?'<th class="num">Cost</th>':""}<th>Source</th></tr></thead>
+      <tbody>${e.raw.map(x=>`<tr>
+        <td>${esc(x.name)}</td>
+        <td class="num mono">${x.qty}</td>
+        ${S.money?`<td class="num mono">${x.item&&num(x.item.buyCost)!=null? money(x.item.buyCost*x.qty):'<span class="muted">—</span>'}</td>`:""}
+        <td class="tiny muted">${x.item&&x.item.source? esc(x.item.source):"—"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>
+    <div class="sec-title">Sub-crafts first</div>
+    <div class="tree" style="margin-bottom:18px">
+      ${e.steps.filter(s=>s.item.id!==it.id).map(s=>`<div class="tnode">
+        <span class="q">${s.crafts}×</span>
+        <span class="nm craftable" data-id="${s.item.id}">${esc(s.item.name)}</span>
+        <span class="meta">${esc(benchName(s.item.benchId)||"bench not set")}</span>
+      </div>`).join("")}
+    </div>` : "";
+
+  openModal(`
+    <div class="mhead">
+      <div style="flex:1">
+        <h2>${esc(it.name)}</h2>
+        <div class="sub">
+          ${craft? (it.benchId? esc(benchName(it.benchId)) : "no bench set") : "raw material"}
+          ${it.category? " · "+esc(it.category):""}
+          ${num(it.craftTime)!=null? " · "+dur(it.craftTime):""}
+          ${it.levelReq? " · level "+esc(it.levelReq):""}
+          ${num(it.xp)!=null? " · "+it.xp+" xp":""}
+        </div>
+      </div>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="mbody">
+      ${stats}
+      ${gaps.length? `<div class="card" style="border-color:rgba(251,191,36,.3);margin-bottom:18px;padding:11px 13px">
+        <div class="tiny" style="color:var(--warn);font-weight:700">Missing: ${gaps.map(esc).join(" · ")}</div></div>`:""}
+      ${direct}
+      ${deep}
+      ${it.source&&!craft? `<div class="sec-title">Where to get it</div><div style="margin-bottom:18px">${esc(it.source)}</div>`:""}
+      ${it.notes? `<div class="sec-title">Notes</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(it.notes)}</div>`:""}
+      ${usedIn.length? `<div class="sec-title">Used in</div><div class="chips">${usedIn.map(u=>`<button class="chip" data-id="${u.id}">${esc(u.name)}</button>`).join("")}</div>`:""}
+    </div>
+    <div class="mfoot">
+      ${S.canEdit? `<button class="btn danger" data-del="${it.id}">Delete</button>`:""}
+      <div class="spacer"></div>
+      ${isCraftable(it)? `<button class="btn" data-plan="${esc(it.name)}">Add to plan</button>`:""}
+      ${S.canEdit? `<button class="btn primary" data-edit="${it.id}">Edit</button>`:""}
+    </div>`, "wide");
+}
+
+/* =====================================================================
+   MODAL: ITEM EDIT
+   ===================================================================== */
+function openEdit(id){
+  if(!S.canEdit) return toast("You need the edit code to change things",1);
+  const it = id ? S.items.find(x=>x.id===id) : null;
+  const d = it || { name:"", category:"", benchId:"", outputQty:1, craftTime:null, levelReq:"", xp:null,
+                    buyCost:null, sellPrice:null, source:"", notes:"", ingredients:[] };
+  const cats = categories();
+
+  openModal(`
+    <div class="mhead">
+      <div style="flex:1"><h2>${it? "Edit item":"New item"}</h2>
+      <div class="sub">Leave the ingredients empty to file it as a raw material.</div></div>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="mbody">
+      <div class="grid2" style="margin-bottom:12px">
+        <div><label class="f">Item name *</label><input id="e_name" value="${esc(d.name)}" placeholder="e.g. Lockpick" autofocus></div>
+        <div><label class="f">Category</label><input id="e_cat" list="dlCats" value="${esc(d.category)}" placeholder="Tools, Weapons, Drugs…">
+          <datalist id="dlCats">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist></div>
+      </div>
+
+      <div class="sec-title" style="margin-top:18px">Ingredients</div>
+      <div id="ingList">${(d.ingredients.length? d.ingredients : [{name:"",qty:1}]).map(ingRow).join("")}</div>
+      <button class="btn sm ghost" id="addIng">+ Add ingredient</button>
+      <div class="tiny muted" style="margin-top:7px">Anything you name that isn't already listed gets added as a raw material automatically.</div>
+
+      <div class="sec-title" style="margin-top:22px">Crafting</div>
+      <div class="grid3" style="margin-bottom:12px">
+        <div><label class="f">Bench</label><select id="e_bench">
+          <option value="">— none —</option>
+          ${S.benches.map(b=>`<option value="${b.id}" ${d.benchId===b.id?"selected":""}>${esc(b.name)}</option>`).join("")}
+        </select></div>
+        <div><label class="f">Makes (qty)</label><input id="e_out" type="number" min="1" value="${d.outputQty||1}"></div>
+        <div><label class="f">Craft time (sec)</label><input id="e_time" type="number" min="0" step="any" value="${d.craftTime??""}"></div>
+        <div><label class="f">Level / rep req</label><input id="e_lvl" value="${esc(d.levelReq)}" placeholder="e.g. 3"></div>
+        <div><label class="f">XP gained</label><input id="e_xp" type="number" step="any" value="${d.xp??""}"></div>
+      </div>
+
+      <details class="fold" ${S.money||num(d.buyCost)!=null||num(d.sellPrice)!=null?"open":""} style="margin-top:18px">
+        <summary>Money <span class="muted tiny">— optional, hidden unless you turn it on</span></summary>
+        <div class="grid2" style="margin:12px 0">
+          <div><label class="f">Buy / material cost (each)</label><input id="e_buy" type="number" step="any" value="${d.buyCost??""}"></div>
+          <div><label class="f">Sell price (each)</label><input id="e_sell" type="number" step="any" value="${d.sellPrice??""}"></div>
+        </div>
+      </details>
+
+      <div style="margin:16px 0 12px"><label class="f">Where it comes from</label>
+        <input id="e_src" value="${esc(d.source)}" placeholder="Hardware store, mining, scrapping, NPC…"></div>
+      <div><label class="f">Notes</label><textarea id="e_notes" placeholder="Anything worth remembering">${esc(d.notes)}</textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Cancel</button>
+      <button class="btn primary" id="saveItem">${it?"Save changes":"Add item"}</button>
+    </div>`, "wide");
+
+  $("#modalHost").dataset.editId = it? it.id : "";
+  refreshDatalist();
+  $("#addIng").onclick = ()=>{ $("#ingList").insertAdjacentHTML("beforeend", ingRow({name:"",qty:1})); };
+  $("#saveItem").onclick = ()=>saveItemForm(it);
+}
+function ingRow(g){
+  return `<div class="ingrow">
+    <input class="ing-n" list="dlItems" value="${esc(g.name||"")}" placeholder="Ingredient name">
+    <input class="ing-q" type="number" min="0" step="any" value="${g.qty??1}" placeholder="Qty">
+    <button type="button" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+}
+
+async function saveItemForm(existing){
+  const name = $("#e_name").value.trim();
+  if(!name) return toast("Give it a name",1);
+
+  const ings = $$("#ingList .ingrow").map(r=>({
+    name: r.querySelector(".ing-n").value.trim(),
+    qty:  num(r.querySelector(".ing-q").value) || 0
+  })).filter(g=>g.name);
+
+  const dupe = S.items.find(x=>norm(x.name)===norm(name) && x.id!==(existing&&existing.id));
+  if(dupe) return toast("Something's already called that",1);
+
+  const it = {
+    id: existing? existing.id : uid("it"),
+    name, category:$("#e_cat").value.trim(), benchId:$("#e_bench").value,
+    outputQty: Math.max(1, parseInt($("#e_out").value)||1),
+    craftTime: num($("#e_time").value), levelReq:$("#e_lvl").value.trim(), xp:num($("#e_xp").value),
+    buyCost: num($("#e_buy").value), sellPrice: num($("#e_sell").value),
+    source: $("#e_src").value.trim(), notes: $("#e_notes").value.trim(),
+    ingredients: ings
+  };
+
+  try{
+    const saved = await Store.saveItem(it);
+    upsertLocal(saved);
+
+    // auto-create any ingredient that doesn't exist yet, as a raw material
+    let created = 0;
+    for(const g of ings){
+      if(S.byName.get(norm(g.name))) continue;
+      const stub = { id:uid("it"), name:g.name.trim(), category:"", benchId:"", outputQty:1,
+                     craftTime:null, levelReq:"", xp:null, buyCost:null, sellPrice:null,
+                     source:"", notes:"", ingredients:[] };
+      upsertLocal(await Store.saveItem(stub));
+      created++;
+    }
+    closeModal(); render();
+    toast(created? `Saved — ${created} new material${created>1?"s":""} added` : "Saved");
+  }catch(err){ console.error(err); toast("Save failed: "+(err.message||err),1); }
+}
+function upsertLocal(it){
+  const i = S.items.findIndex(x=>x.id===it.id);
+  if(i>=0) S.items[i]=it; else S.items.push(it);
+  reindex();
+}
+
+/* =====================================================================
+   MODAL: BENCH EDIT
+   ===================================================================== */
+function openBench(id){
+  if(!S.canEdit) return toast("You need the edit code to change things",1);
+  const b = id ? S.benches.find(x=>x.id===id) : null;
+  const d = b || {name:"",location:"",notes:""};
+  openModal(`
+    <div class="mhead"><div style="flex:1"><h2>${b?"Edit bench":"New bench"}</h2></div><button class="x" data-close>×</button></div>
+    <div class="mbody">
+      <div style="margin-bottom:12px"><label class="f">Bench name *</label><input id="b_name" value="${esc(d.name)}" placeholder="e.g. Weapon Bench" autofocus></div>
+      <div style="margin-bottom:12px"><label class="f">Location in the city</label><input id="b_loc" value="${esc(d.location)}" placeholder="e.g. Sandy Shores garage, back room"></div>
+      <div><label class="f">Notes</label><textarea id="b_notes" placeholder="Access requirements, gang only, hours…">${esc(d.notes)}</textarea></div>
+    </div>
+    <div class="mfoot">
+      ${b? `<button class="btn danger" id="delBench">Delete</button>`:""}
+      <div class="spacer"></div>
+      <button class="btn ghost" data-close>Cancel</button>
+      <button class="btn primary" id="saveBench">Save</button>
+    </div>`);
+
+  $("#saveBench").onclick = async ()=>{
+    const name = $("#b_name").value.trim();
+    if(!name) return toast("Name it",1);
+    const rec = { id: b? b.id : uid("bn"), name, location:$("#b_loc").value.trim(), notes:$("#b_notes").value.trim() };
+    try{
+      const saved = await Store.saveBench(rec);
+      const i = S.benches.findIndex(x=>x.id===saved.id);
+      if(i>=0) S.benches[i]=saved; else S.benches.push(saved);
+      closeModal(); render(); toast("Bench saved");
+    }catch(err){ toast("Save failed: "+(err.message||err),1) }
+  };
+  if(b) $("#delBench").onclick = async ()=>{
+    const n = S.items.filter(i=>i.benchId===b.id).length;
+    if(!confirm(`Delete "${b.name}"?${n?` ${n} recipe(s) will lose their bench.`:""}`)) return;
+    try{
+      await Store.delBench(b.id);
+      S.benches = S.benches.filter(x=>x.id!==b.id);
+      for(const it of S.items) if(it.benchId===b.id){ it.benchId=""; await Store.saveItem(it); }
+      closeModal(); render(); toast("Bench deleted");
+    }catch(err){ toast("Delete failed",1) }
+  };
+}
+
+/* =====================================================================
+   MODAL: DATA
+   ===================================================================== */
+const RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /boards/{board} {
+
+      function isEditor() {
+        return request.auth != null &&
+          exists(/databases/$(database)/documents/boards/$(board)/editors/$(request.auth.uid));
+      }
+      function codeMatches() {
+        return request.resource.data.code ==
+          get(/databases/$(database)/documents/boards/$(board)/config/access).data.code;
+      }
+
+      // the edit code itself: the app can never read it or change it
+      match /config/{doc} {
+        allow read, write: if false;
+      }
+
+      // a device claims editing rights by presenting the code
+      match /editors/{uid} {
+        allow read:          if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid && codeMatches();
+        allow delete:        if false;
+      }
+
+      // the manual itself: everyone reads, only editors write
+      match /items/{doc}   { allow read: if true; allow write: if isEditor(); }
+      match /benches/{doc} { allow read: if true; allow write: if isEditor(); }
+      match /spots/{doc}   { allow read: if true; allow write: if isEditor(); }
+      match /images/{doc}  { allow read: if true; allow write: if isEditor(); }
+    }
+  }
+}`;
+
+function openData(){
+  openModal(`
+    <div class="mhead"><div style="flex:1"><h2>Data</h2>
+      <div class="sub">${CLOUD? "Shared mode — everything syncs live to your crew." : "Solo mode — saved on this device only."}</div></div>
+      <button class="x" data-close>×</button></div>
+    <div class="mbody">
+      <div class="sec-title">Display</div>
+      <label class="switch" style="margin-bottom:6px">
+        <input type="checkbox" id="mToggle" ${S.money?"checked":""}>
+        <span>Track money — costs, sell prices and profit</span>
+      </label>
+      <div class="tiny muted" style="margin-bottom:22px">Off by default. The fields stay on every item either way, so nothing you've already typed is lost — turning this on just brings the columns and profit badges back. This setting is per device.</div>
+
+      <div class="sec-title">Backups</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
+        <button class="btn" id="expJson">Export backup (.json)</button>
+        <button class="btn" id="expCsv">Export spreadsheet (.csv)</button>
+        ${S.canEdit? `<button class="btn ghost" id="impBtn">Import backup</button>
+        <input type="file" id="impFile" accept=".json" class="hidden">`:""}
+      </div>
+
+      <div class="sec-title">What's in here</div>
+      <div class="stats" style="margin-bottom:22px">
+        <div class="stat"><div class="k">Recipes</div><div class="v">${S.items.filter(isCraftable).length}</div></div>
+        <div class="stat"><div class="k">Materials</div><div class="v">${S.items.filter(i=>!isCraftable(i)).length}</div></div>
+        <div class="stat"><div class="k">Benches</div><div class="v">${S.benches.length}</div></div>
+        <div class="stat"><div class="k">Drop offs</div><div class="v">${spotsOf("dropoff").length}</div></div>
+        <div class="stat"><div class="k">Bus blocks</div><div class="v">${spotsOf("busblock").length}</div></div>
+        <div class="stat"><div class="k">Needs attention</div><div class="v ${S.items.filter(i=>gapsOf(i).length).length?"bad":""}">${S.items.filter(i=>gapsOf(i).length).length}</div></div>
+      </div>
+      ${!CLOUD && localBytes()>3.4e6? `<div class="card" style="border-color:rgba(251,191,36,.35);margin-bottom:22px;padding:11px 13px">
+        <div class="tiny" style="color:var(--warn)"><b>Storage is filling up</b> — about ${Math.round(localBytes()/1e6*10)/10} MB of a browser's ~5 MB limit, mostly screenshots.
+        Switching to shared mode moves them off this device; image links instead of uploads also keep it light.</div></div>`:""}
+
+      ${CLOUD? `
+      <div class="sec-title">Access</div>
+      <div class="tiny muted" style="margin-bottom:12px">
+        ${S.canEdit
+          ? "This device can edit. Everyone else opens the manual read-only until they enter the edit code."
+          : "You're read-only. Everything here is browsable and the planner works — adding and changing needs the edit code."}
+      </div>
+      <button class="btn sm" id="lockBtn">${S.canEdit? "Access details":"Unlock editing"}</button>` : `
+      <div class="sec-title">Turn on shared crew mode</div>
+      <div class="tiny muted" style="margin-bottom:10px">
+        Create a free project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>,
+        add a <b>Firestore Database</b>, enable <b>Anonymous</b> sign-in under Authentication, register a
+        <b>Web app</b>, then paste that app's config into the <code>FIREBASE</code> block near the bottom of
+        this file. Set your edit code by creating one document by hand:
+        <b>boards → ${esc(BOARD)} → config → access</b> with a single text field <code>code</code>.
+        Everything else appears on its own as you save. Then paste these into <b>Firestore Database → Rules</b>:
+      </div>
+      <textarea readonly style="min-height:190px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px">${esc(RULES)}</textarea>
+      <div class="tiny muted" style="margin-top:8px">Anyone with the page can read it; only devices that have entered the
+      edit code can write. That's checked by Firestore itself, so it holds even if someone opens dev tools.</div>`}
+
+      ${S.canEdit? `<div class="sec-title" style="margin-top:22px;color:var(--bad)">Danger</div>
+      <button class="btn danger" id="wipe">Erase everything</button>`:""}
+    </div>
+    <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`, "wide");
+
+  if($("#lockBtn")) $("#lockBtn").onclick = ()=>{ closeModal(); openUnlock(); };
+
+  $("#mToggle").onchange = e=>{ S.money = e.target.checked; saveMoney(); render(); toast(S.money? "Money tracking on":"Money tracking off"); };
+
+  $("#expJson").onclick = async ()=>{
+    const btn = $("#expJson"); btn.disabled = true; btn.textContent = "Gathering…";
+    try{
+      // spots only carry thumbnails, so pull the full images in for the backup
+      const spots = [];
+      for(const sp of S.spots){
+        const images = [];
+        for(const e of (sp.images||[])){
+          const id = imgId(e);
+          if(id) images.push({ id, thumb:imgThumb(e), data: await getImage(id) });
+          else images.push(e);
+        }
+        spots.push({ ...sp, images });
+      }
+      download("street-manual-backup.json",
+        JSON.stringify({v:3, exported:new Date().toISOString(), benches:S.benches, items:S.items, spots}, null, 2),
+        "application/json");
+    }catch(err){ toast("Export failed: "+(err.message||err),1); }
+    btn.disabled = false; btn.textContent = "Export backup (.json)";
+  };
+
+  $("#expCsv").onclick = ()=>{
+    const rows = [["Item","Category","Bench","Bench location","Makes","Craft time (s)","Level","XP","Buy cost","Sell price","Source","Ingredient","Ingredient qty","Notes"]];
+    for(const it of S.items.slice().sort((a,b)=>a.name.localeCompare(b.name))){
+      const b = benchOf(it.benchId)||{};
+      const base = [it.name, it.category, b.name||"", b.location||"", it.outputQty||1, it.craftTime??"", it.levelReq, it.xp??"", it.buyCost??"", it.sellPrice??"", it.source];
+      if(isCraftable(it)) for(const g of it.ingredients) rows.push([...base, g.name, g.qty, it.notes]);
+      else rows.push([...base, "", "", it.notes]);
+    }
+    download("street-manual-recipes.csv", rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n"), "text/csv");
+  };
+
+  if($("#impBtn")) $("#impBtn").onclick = ()=>$("#impFile").click();
+  if($("#impFile")) $("#impFile").onchange = async e=>{
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const d = JSON.parse(await f.text());
+      if(!Array.isArray(d.items)) throw new Error("That isn't a Street Manual backup");
+      const sp = d.spots||[];   // v1 backups predate the spots tabs
+      if(!confirm(`Replace everything with ${d.items.length} items, ${(d.benches||[]).length} benches and ${sp.length} saved spots?`)) return;
+      toast("Importing…");
+      await Store.replaceAll(d.items, d.benches||[], []);   // clears old screenshots too
+      const spots = [];
+      for(const one of sp){
+        const images = [];
+        for(const e of (one.images||[])){
+          if(e && e.data) images.push({ id: await putImage(e.data), thumb: e.thumb || e.data });
+          else images.push(e);
+        }
+        const rec = { ...one, images };
+        await Store.saveSpot(rec);
+        spots.push(rec);
+      }
+      S.items = d.items; S.benches = d.benches||[]; S.spots = spots; reindex();
+      closeModal(); render(); toast("Imported");
+    }catch(err){ toast("Import failed: "+err.message,1) }
+  };
+
+  if($("#wipe")) $("#wipe").onclick = async ()=>{
+    if(!confirm("Erase every item, bench, saved spot and screenshot? This cannot be undone.")) return;
+    if(!confirm("Really sure? Export a backup first if you're not.")) return;
+    await Store.replaceAll([],[],[]);
+    S.items=[]; S.benches=[]; S.spots=[]; reindex(); closeModal(); render(); toast("Wiped");
+  };
+}
+function download(name, text, mime){
+  const b = new Blob([text],{type:mime});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b); a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* =====================================================================
+   RENDER + EVENTS
+   ===================================================================== */
+const TABS = [
+  {id:"catalogue", label:"Catalogue",  n:()=>S.items.length},
+  {id:"planner",   label:"Planner",    n:()=>S.targets.length||""},
+  {id:"benches",   label:"Benches",    n:()=>S.benches.length},
+  {id:"dropoff",   label:"Drop Offs",  n:()=>spotsOf("dropoff").length||""},
+  {id:"busblock",  label:"Bus Blocks", n:()=>spotsOf("busblock").length||""}
+];
+
+function refreshDatalist(){
+  // dlItems is everything (ingredient autocomplete); dlCraft is only things you
+  // can actually make, which is all the planner should ever suggest.
+  $("#dlItems").innerHTML = S.items.map(i=>`<option value="${esc(i.name)}">`).join("");
+  $("#dlCraft").innerHTML = S.items.filter(isCraftable)
+    .slice().sort((a,b)=>a.name.localeCompare(b.name))
+    .map(i=>`<option value="${esc(i.name)}">`).join("");
+}
+
+function render(){
+  $("#tabs").innerHTML = TABS.map(t=>
+    `<button class="${S.tab===t.id?"on":""}" data-tab="${t.id}">${t.label}${t.n()!==""?`<span class="n">${t.n()}</span>`:""}</button>`).join("");
+  $("#view").innerHTML =
+    S.tab==="catalogue" ? viewCatalogue() :
+    S.tab==="planner"   ? viewPlanner()   :
+    S.tab==="benches"   ? viewBenches()   : viewSpots(S.tab);
+  refreshDatalist();
+  paintLock();
+  wireView();
+}
+
+function wireView(){
+  const q = $("#q");
+  if(q){
+    q.oninput = e=>{ S.q = e.target.value; const p=e.target.selectionStart; render(); const n=$("#q"); n.focus(); n.setSelectionRange(p,p); };
+  }
+  const fb = $("#fBench");
+  if(fb) fb.onchange = e=>{ S.fBench=e.target.value; render(); };
+
+  $$("[data-flag]").forEach(b=> b.onclick = ()=>{ S.fFlag = S.fFlag===b.dataset.flag? "" : b.dataset.flag; if(b.dataset.flag==="") S.fFlag=""; render(); });
+  $$("[data-cat]").forEach(b=> b.onclick = ()=>{ S.fCat = S.fCat===b.dataset.cat? "" : b.dataset.cat; render(); });
+
+  const sq = $("#sq");
+  if(sq) sq.oninput = e=>{ S.spotQ = e.target.value; const p=e.target.selectionStart; render(); const n=$("#sq"); n.focus(); n.setSelectionRange(p,p); };
+  $$("[data-stag]").forEach(b=> b.onclick = ()=>{ S.spotTag = b.dataset.stag; render(); });
+
+  const ab = $("#addBench1"); if(ab) ab.onclick = ()=>openBench(null);
+  $$("[data-editbench]").forEach(b=> b.onclick = ()=>openBench(b.dataset.editbench));
+
+  // planner
+  const pa = $("#planAddBtn");
+  if(pa){
+    const add = ()=>{
+      const n = $("#planAdd").value.trim(); if(!n) return;
+      const qy = Math.max(1, parseInt($("#planQty").value)||1);
+      const ex = S.targets.find(t=>norm(t.name)===norm(n));
+      if(ex) ex.qty += qy; else S.targets.push({name:n, qty:qy});
+      $("#planAdd").value=""; $("#planQty").value=1; render(); $("#planAdd").focus();
+    };
+    pa.onclick = add;
+    $("#planAdd").onkeydown = e=>{ if(e.key==="Enter") add(); };
+  }
+  $$("[data-tq]").forEach(i=> i.onchange = ()=>{ S.targets[+i.dataset.tq].qty = Math.max(1,parseInt(i.value)||1); render(); });
+  $$("[data-trm]").forEach(b=> b.onclick = ()=>{ S.targets.splice(+b.dataset.trm,1); render(); });
+  const pc = $("#planClear"); if(pc) pc.onclick = ()=>{ S.targets=[]; render(); };
+  const us = $("#useStock"); if(us) us.onchange = ()=>{ S.useStock = us.checked; render(); };
+  $$("[data-stock]").forEach(i=> i.onchange = ()=>{
+    const k = norm(i.dataset.stock);
+    const v = Math.max(0, parseInt(i.value)||0);
+    if(v) S.stock[k]=v; else delete S.stock[k];
+    saveStock(); render();
+  });
+}
+
+// One delegated handler for everything that opens an item.
+document.addEventListener("click", e=>{
+  const c = e.target.closest("[data-close]"); if(c){ closeModal(); return; }
+  const del = e.target.closest("[data-del]");
+  if(del){
+    const it = S.items.find(x=>x.id===del.dataset.del); if(!it) return;
+    if(!confirm(`Delete "${it.name}"?`)) return;
+    Store.delItem(it.id).then(()=>{
+      S.items = S.items.filter(x=>x.id!==it.id); reindex(); closeModal(); render(); toast("Deleted");
+    }).catch(()=>toast("Delete failed",1));
+    return;
+  }
+  const ed = e.target.closest("[data-edit]"); if(ed){ openEdit(ed.dataset.edit); return; }
+  const pl = e.target.closest("[data-plan]");
+  if(pl){
+    const n = pl.dataset.plan;
+    const ex = S.targets.find(t=>norm(t.name)===norm(n));
+    if(ex) ex.qty++; else S.targets.push({name:n, qty:1});
+    closeModal(); S.tab="planner"; render(); toast("Added to plan");
+    return;
+  }
+  const tab = e.target.closest("[data-tab]"); if(tab){ S.tab = tab.dataset.tab; S.spotQ=""; S.spotTag=""; render(); return; }
+
+  const ns = e.target.closest("[data-newspot]");  if(ns){ openSpotEdit(null, ns.dataset.newspot); return; }
+  const es = e.target.closest("[data-editspot]"); if(es){ openSpotEdit(es.dataset.editspot); return; }
+  const ds = e.target.closest("[data-delspot]");
+  if(ds){
+    const sp = S.spots.find(x=>x.id===ds.dataset.delspot); if(!sp) return;
+    if(!confirm(`Delete "${sp.name}"?`)) return;
+    Store.delSpot(sp.id).then(async ()=>{
+      for(const e of (sp.images||[])){ const id = imgId(e); if(id) await dropImage(id); }
+      S.spots = S.spots.filter(x=>x.id!==sp.id); closeModal(); render(); toast("Deleted");
+    }).catch(()=>toast("Delete failed",1));
+    return;
+  }
+  const sh = e.target.closest("[data-shot]"); if(sh){ openShot(sh.src); return; }
+  const sp = e.target.closest("[data-spot]"); if(sp){ openSpot(sp.dataset.spot); return; }
+
+  const idEl = e.target.closest("[data-id]"); if(idEl){ openItem(idEl.dataset.id); return; }
+});
+
+$("#fab").onclick = ()=> KIND[S.tab] ? openSpotEdit(null, S.tab) : openEdit(null);
+$("#btnData").onclick = openData;
+$("#btnLock").onclick = openUnlock;
+
+function paintLock(){
+  const b = $("#btnLock");
+  b.hidden = !CLOUD;
+  b.textContent = S.canEdit ? "Editing on" : "View only · unlock";
+  b.style.color = S.canEdit ? "var(--acc)" : "var(--warn)";
+  $("#fab").hidden = !S.canEdit;
+}
+
+function openUnlock(){
+  if(S.canEdit) return openModal(`
+    <div class="mhead"><div style="flex:1"><h2>Editing is on</h2>
+      <div class="sub">This device can add and change things.</div></div>
+      <button class="x" data-close>×</button></div>
+    <div class="mbody"><div class="tiny muted">Unlocked for this browser. Clearing your site data signs you
+      out and you'd enter the code again. To take a device's access away, delete its row from
+      <b>boards → ${esc(BOARD)} → editors</b> in the Firebase console.</div></div>
+    <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`);
+
+  openModal(`
+    <div class="mhead"><div style="flex:1"><h2>Unlock editing</h2>
+      <div class="sub">Everyone can read and use the planner. Adding and changing needs the crew's edit code.</div></div>
+      <button class="x" data-close>×</button></div>
+    <div class="mbody">
+      <label class="f">Edit code</label>
+      <input id="u_code" type="password" placeholder="Ask whoever set this up" autofocus>
+      <div class="tiny muted" style="margin-top:8px">Remembered on this browser once it works.</div>
+      <div class="tiny" id="u_err" style="color:var(--bad);margin-top:8px"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn ghost" data-close>Cancel</button>
+      <button class="btn primary" id="u_go">Unlock</button>
+    </div>`);
+
+  const go = async ()=>{
+    const code = $("#u_code").value.trim();
+    if(!code) return;
+    const btn = $("#u_go"); btn.disabled = true; btn.textContent = "Checking…";
+    try{
+      await claimEditor(code);
+      closeModal(); paintLock(); render(); toast("Editing unlocked");
+    }catch(err){
+      btn.disabled = false; btn.textContent = "Unlock";
+      $("#u_err").textContent = /permission|insufficient/i.test(err.message||"")
+        ? "That code isn't right." : ("Couldn't check that: "+(err.message||err));
+    }
+  };
+  $("#u_go").onclick = go;
+  $("#u_code").onkeydown = e=>{ if(e.key==="Enter") go(); };
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+async function boot(){
+  document.title = CONFIG.APP_NAME;
+  $("#brandName").textContent = CONFIG.APP_NAME;
+  $("#brandSub").textContent  = CONFIG.APP_SUB;
+  $("#brandMark").src = LOGO;
+  $("#brandMark").alt = CONFIG.APP_NAME;
+  const fav = document.createElement("link");
+  fav.rel = "icon"; fav.type = "image/png"; fav.href = LOGO_FAV;
+  document.head.appendChild(fav);
+  initCloud();
+  $("#modePill").className = "pill " + (CLOUD? "live":"solo");
+  $("#modeTxt").textContent = CLOUD? "Shared · live" : "Solo · this device";
+
+  // Keys are filled in but Firestore didn't come up — say so loudly rather than
+  // silently writing to this device while the crew sees nothing.
+  if(configured() && !CLOUD){
+    $("#modePill").className = "pill solo";
+    $("#modeTxt").textContent = "Offline · not syncing";
+    toast("Can't reach Firebase — running on this device only", 1);
+  }
+
+  if(CLOUD){
+    try{ await signIn(); await checkEditor(); }
+    catch(err){ console.warn("sign-in failed", err.message); S.canEdit = false; }
+  }else S.canEdit = true;
+
+  try{
+    const d = await Store.loadAll();
+    S.items = d.items; S.benches = d.benches; S.spots = d.spots||[]; reindex();
+  }catch(err){
+    console.error(err); toast("Couldn't load data: "+(err.message||err), 1);
+  }
+  render();
+
+  Store.subscribe(async ()=>{
+    try{
+      const d = await Store.loadAll();
+      S.items = d.items; S.benches = d.benches; S.spots = d.spots||[]; reindex();
+      if($("#overlay").hidden) render();
+    }catch(e){}
+  });
+}
+// The Firebase SDK is a module script, so it finishes after this one. Wait for
+// it when the keys are set; start straight away when they aren't.
+if(!configured() || window.__fb || window.__fbFailed) boot();
+else{
+  let started = false;
+  const go = ()=>{ if(!started){ started = true; boot(); } };
+  window.addEventListener("fb-ready", go, {once:true});
+  setTimeout(go, 8000);   // never leave the page stuck on "loading…"
+}
+</script>
+</body>
+</html>
