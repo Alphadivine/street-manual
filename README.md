@@ -11,7 +11,7 @@ Street Manual is a single self-contained HTML file. No build step, no framework,
 own — it runs entirely in the browser and stores shared data in a free
 [Firebase Firestore](https://firebase.google.com/products/firestore) database.
 
-> **Live site:** https://alphadivine.github.io/street-manual/`
+> **Live site:** _add your GitHub Pages URL here once deployed, e.g._ `https://yourname.github.io/street-manual/`
 
 ---
 
@@ -55,6 +55,29 @@ screenshots, tags and a short "how to run it" note. Bus blocks also record **wha
 
 Tags (`heli-proof`, `needs 2 cars`, `night only`) become the filter chips at the top of each tab.
 
+### Heists
+Crew size, gear, the hacks to expect and the steps. Details below.
+
+---
+
+## 💰 Heists
+
+
+Each heist records the crew size, the gear, the hacks to expect and the steps, plus screenshots,
+tags and notes.
+
+- **Gear** is a name and a quantity. When the name matches something in the catalogue it links
+  straight to it and shows which bench makes it; anything else — a getaway van, masks — stays as
+  plain text and is simply listed.
+- **Prep in planner** takes every piece of gear that exists in the catalogue and loads it into the
+  Planner in one click: full shopping list, bench route, blueprints you're missing. Free-text gear
+  is skipped, and the button only appears when there's something plannable.
+- **Hacks** are a name and a count, so you know three circle hacks are coming before you start.
+- **Steps** are typed one per line and rendered as a numbered list. Reordering is moving a line.
+
+Heists live in the same Firestore collection as drop offs and bus blocks, so **no security-rules
+change is needed** to add them.
+
 ---
 
 ## 📐 Blueprints
@@ -88,7 +111,8 @@ These are the things that quietly go wrong in a spreadsheet:
 - **Stock** — on-hand counts are consumed at every level. Already have 2 weapon parts? It won't send
   you out for the steel. (On-hand counts stay on your own device even in shared mode — they're
   yours, not the crew's — and stay editable for read-only users.)
-- **Loops** — if two recipes ever reference each other, it's caught and flagged rather than hanging.
+- **Loops** — if two recipes ever reference each other, it's caught and flagged rather than
+  hanging, and the warning names the chain so you can go and fix the data.
 - **Unknowns** — an ingredient or blueprint you name that isn't listed yet is created automatically,
   so the catalogue fills itself in as you type.
 - **Blueprints** — an unlock is needed once however many you make; one that gets used up scales with

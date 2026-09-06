@@ -133,6 +133,7 @@ textarea{resize:vertical;min-height:64px}
 select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%2393a0b0'/></svg>");background-repeat:no-repeat;background-position:right 11px center;padding-right:28px}
 label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-transform:uppercase;letter-spacing:.08em;margin:0 0 5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.unitrow{display:grid;grid-template-columns:1fr 76px;gap:6px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 @media(max-width:620px){.grid3{grid-template-columns:1fr 1fr}}
 
@@ -282,6 +283,13 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .spot .area{font-size:12.5px;color:var(--acc2);margin-bottom:5px}
 .spot .blocks{font-size:12.5px;color:var(--warn);margin-bottom:5px}
 .spot .tagrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.spot .hmeta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tag.tcrew{background:rgba(74,222,128,.14);color:var(--acc)}
+.tag.thack{background:rgba(144,133,233,.15);color:#9085e9}
+ol.steps{margin:0 0 18px;padding-left:22px}
+ol.steps li{padding:5px 0 5px 4px;border-bottom:1px solid rgba(255,255,255,.05)}
+ol.steps li:last-child{border-bottom:none}
+ol.steps li::marker{color:var(--acc);font-weight:800}
 
 .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:18px}
 .shots img{width:100%;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;display:block}
@@ -739,7 +747,7 @@ function rollup(rootName, qty, opts){
   const fromHave= new Map();  // key -> qty pulled from stock
   const bps     = new Map();  // key -> {name, item, qty, unlock}
   const unknown = new Set();
-  let loop = false;
+  let loop = false, loopChain = null;
 
   function addBp(name, q, unlock, item){
     const key = norm(name);
@@ -773,8 +781,14 @@ function rollup(rootName, qty, opts){
     // a blueprint isn't something you buy at the hardware store — own bucket
     if(isBlueprint(it)){ addBp(it.name, need, false, it); return; }
     if(!isCraftable(it)){ addRaw(key, it.name, need, it); return; }
-    if(path.has(key)){ loop = true; addRaw(key, it.name, need, it); return; }
-    if(depth > 24){ loop = true; addRaw(key, it.name, need, it); return; }
+    const noteLoop = () => {
+      loop = true;
+      if(!loopChain) loopChain = [...path, key]
+        .filter(k=>k!=="__plan__")
+        .map(k=>(S.byName.get(k)||{}).name || k);
+    };
+    if(path.has(key)){ noteLoop(); addRaw(key, it.name, need, it); return; }
+    if(depth > 24){ noteLoop(); addRaw(key, it.name, need, it); return; }
 
     const per    = Math.max(1, it.outputQty||1);
     const crafts = Math.ceil(need/per);
@@ -783,14 +797,25 @@ function rollup(rootName, qty, opts){
     s.depth   = Math.max(s.depth, depth);
     steps.set(key, s);
 
-    // blueprints this recipe needs — only once we know we're actually crafting it
+    const p2 = new Set(path); p2.add(key);
+
+    // Blueprints this recipe needs — only once we know we're actually crafting it.
+    // Following one down is only safe when it's genuinely a craftable blueprint
+    // that isn't already above us: a blueprint sharing a name with the item it
+    // unlocks would otherwise send us round in circles.
     for(const bp of bpsOf(it)){
       if(!bp.name) continue;
-      if(bp.consumed) walk(bp.name, (num(bp.qty)||1) * crafts, depth+1, new Set(path));
-      else addBp(bp.name, 1, true, S.byName.get(norm(bp.name)));
+      const bpKey = norm(bp.name);
+      const bpIt  = S.byName.get(bpKey);
+      if(!bp.consumed){ addBp(bp.name, 1, true, bpIt); continue; }
+      const need2 = (num(bp.qty)||1) * crafts;
+      if(bpIt && isBlueprint(bpIt) && isCraftable(bpIt) && !p2.has(bpKey)) walk(bp.name, need2, depth+1, p2);
+      else{
+        if(bpIt && p2.has(bpKey)) noteLoop();
+        addBp(bp.name, need2, false, bpIt);
+      }
     }
 
-    const p2 = new Set(path); p2.add(key);
     for(const ing of it.ingredients){
       const q = (num(ing.qty)||0) * crafts;
       if(q>0) walk(ing.name, q, depth+1, p2);
@@ -820,7 +845,7 @@ function rollup(rootName, qty, opts){
     raw:[...raw.values()].sort((a,b)=>a.name.localeCompare(b.name)),
     steps:[...steps.values()].sort((a,b)=> b.depth-a.depth || a.item.name.localeCompare(b.item.name)),
     blueprints:[...bps.values()].sort((a,b)=>a.name.localeCompare(b.name)),
-    fromHave, unknown:[...unknown], loop, cost, missingCost, time, missingTime
+    fromHave, unknown:[...unknown], loop, loopChain, cost, missingCost, time, missingTime
   };
 }
 
@@ -1112,7 +1137,9 @@ function viewPlanner(){
       </div>`:""}
       ${r.loop? `<div class="card" style="border-color:rgba(248,113,113,.35);margin-bottom:16px">
         <div class="sec-title" style="color:var(--bad)">Recipe loop detected</div>
-        <div class="tiny">Something references itself down the chain. It's been treated as raw so the maths still works.</div>
+        ${r.loopChain? `<div style="margin-bottom:8px;font-weight:650">${r.loopChain.map(esc).join(" → ")}</div>`:""}
+        <div class="tiny">That chain comes back to where it started, so the totals below are a best guess.
+        Usually it means something lists itself as its own ingredient or blueprint — open the first item above and check.</div>
       </div>`:""}
 
       ${r.blueprints.length? `<div class="card" style="margin-bottom:16px">
@@ -1190,8 +1217,14 @@ const KIND = {
               nameHint:"e.g. Vespucci parking garage, level 3" },
   busblock: { label:"Bus Blocks", one:"bus block", icon:"🚌",
               blurb:"Spots to park something big and choke the road behind you.",
-              nameHint:"e.g. Tunnel mouth under Olympic" }
+              nameHint:"e.g. Tunnel mouth under Olympic" },
+  heist:    { label:"Heists",     one:"heist",     icon:"💰",
+              blurb:"Crew size, gear, the hacks to expect and how it runs.",
+              nameHint:"e.g. Paleto bank" }
 };
+const gearOf  = h => (h && h.gear)  || [];
+const hacksOf = h => (h && h.hacks) || [];
+const stepsOf = h => (h && h.steps) || [];
 const spotsOf = k => S.spots.filter(s=>s.kind===k);
 const tagsOf  = k => [...new Set(spotsOf(k).flatMap(s=>s.tags||[]))].sort();
 
@@ -1203,7 +1236,10 @@ function viewSpots(kind){
   if(q) list = list.filter(s =>
     norm(s.name).includes(q) || norm(s.area).includes(q) ||
     norm(s.notes).includes(q) || norm(s.blocks).includes(q) ||
-    (s.tags||[]).some(t=>norm(t).includes(q)));
+    (s.tags||[]).some(t=>norm(t).includes(q)) ||
+    gearOf(s).some(g=>norm(g.name).includes(q)) ||
+    hacksOf(s).some(h=>norm(h.name).includes(q)) ||
+    stepsOf(s).some(t=>norm(t).includes(q)));
   list = list.slice().sort((a,b)=> (a.area||"~").localeCompare(b.area||"~") || a.name.localeCompare(b.name));
 
   const tags = tagsOf(kind);
@@ -1237,6 +1273,12 @@ function spotCard(s){
       <div class="nm">${esc(s.name)}</div>
       ${s.area? `<div class="area">${esc(s.area)}</div>`:""}
       ${s.blocks? `<div class="blocks">⛔ ${esc(s.blocks)}</div>`:""}
+      ${s.kind==="heist"? `<div class="hmeta">
+        ${s.crew? `<span class="tag tcrew">👥 ${esc(s.crew)}</span>`:""}
+        ${gearOf(s).length? `<span class="tag">${gearOf(s).length} gear</span>`:""}
+        ${hacksOf(s).length? `<span class="tag thack">${hacksOf(s).length} hack${hacksOf(s).length>1?"s":""}</span>`:""}
+        ${stepsOf(s).length? `<span class="tag">${stepsOf(s).length} steps</span>`:""}
+      </div>`:""}
       ${(s.tags||[]).length? `<div class="tagrow">${s.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>`:""}
     </div>
   </div>`;
@@ -1245,6 +1287,7 @@ function spotCard(s){
 /* ---------- spot detail ---------- */
 function openSpot(id){
   const s = S.spots.find(x=>x.id===id); if(!s) return;
+  if(s.kind==="heist") return openHeist(s);
   const K = KIND[s.kind];
   openModal(`
     <div class="mhead">
@@ -1278,6 +1321,59 @@ function openShot(src){
   document.body.appendChild(box);
 }
 
+function openHeist(h){
+  // gear that matches something in the catalogue can be sent to the planner
+  const known = gearOf(h).filter(g=>S.byName.get(norm(g.name)));
+  openModal(`
+    <div class="mhead">
+      <div style="flex:1"><h2>💰 ${esc(h.name)}</h2>
+      <div class="sub">${h.area? esc(h.area) : "Heists"}${h.crew? ` · crew of ${esc(h.crew)}`:""}</div></div>
+      <button class="x" data-close>×</button>
+    </div>
+    <div class="mbody">
+      ${galleryHTML(h.images, h.id)}
+
+      ${gearOf(h).length? `
+        <div class="sec-title">Gear needed</div>
+        <div class="tree" style="margin-bottom:18px">
+          ${gearOf(h).map(g=>{
+            const it = S.byName.get(norm(g.name));
+            return `<div class="tnode">
+              <span class="q">${esc(String(g.qty||1))}×</span>
+              <span class="nm ${it?"craftable":""}" ${it?`data-id="${it.id}"`:""}>${esc(g.name)}</span>
+              <span class="meta">${!it? "not in the catalogue"
+                : isCraftable(it)? `craft @ <span style="${it.benchId?`color:${benchColor(it.benchId)}`:""}">${esc(benchName(it.benchId)||"?")}</span>`
+                : esc(it.source||"material")}</span>
+            </div>`;
+          }).join("")}
+        </div>` : ""}
+
+      ${hacksOf(h).length? `
+        <div class="sec-title">Hacks to expect</div>
+        <div class="tree" style="margin-bottom:18px">
+          ${hacksOf(h).map(k=>`<div class="tnode">
+            <span class="q" style="color:#9085e9">${esc(String(k.qty||1))}×</span>
+            <span class="nm">${esc(k.name)}</span>
+          </div>`).join("")}
+        </div>` : ""}
+
+      ${stepsOf(h).length? `
+        <div class="sec-title">How it runs</div>
+        <ol class="steps">${stepsOf(h).map(t=>`<li>${esc(t)}</li>`).join("")}</ol>` : ""}
+
+      ${h.notes? `<div class="sec-title">Notes</div><div style="margin-bottom:18px;white-space:pre-wrap">${esc(h.notes)}</div>`:""}
+      ${(h.tags||[]).length? `<div class="sec-title">Tags</div><div class="chips">${h.tags.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>`:""}
+    </div>
+    <div class="mfoot">
+      ${S.canEdit? `<button class="btn danger" data-delspot="${h.id}">Delete</button>`:""}
+      <div class="spacer"></div>
+      ${known.length? `<button class="btn" data-prep="${h.id}">Prep in planner</button>`:""}
+      ${S.canEdit? `<button class="btn primary" data-editspot="${h.id}">Edit</button>`
+                 : `<button class="btn ghost" data-close>Close</button>`}
+    </div>`, "wide");
+  hydrateGallery(h.images, h.id);
+}
+
 /* ---------- spot edit ---------- */
 function openSpotEdit(id, kind){
   if(!S.canEdit) return toast("You need the edit code to change things",1);
@@ -1296,7 +1392,27 @@ function openSpotEdit(id, kind){
         <input id="s_name" value="${esc(d.name)}" placeholder="${esc(K.nameHint)}" autofocus></div>
       <div style="margin-bottom:12px"><label class="f">Area / landmark</label>
         <input id="s_area" value="${esc(d.area)}" placeholder="Sandy Shores, behind the gas station off Route 68"></div>
-      ${k==="busblock"? `
+      ${k==="heist"? `
+      <div class="grid2" style="margin-bottom:12px">
+        <div><label class="f">Crew size</label><input id="h_crew" value="${esc(d.crew||"")}" placeholder="4, or 3-5"></div>
+        <div><label class="f">Tags</label><input id="s_tags2" value="${esc((d.tags||[]).join(", "))}" placeholder="high payout, needs a hacker"></div>
+      </div>
+
+      <div class="sec-title" style="margin-top:18px">Gear needed</div>
+      <div id="gearList">${(d.gear||[]).map(gearRow).join("")}</div>
+      <button class="btn sm ghost" id="addGear" type="button">+ Add gear</button>
+      <div class="tiny muted" style="margin-top:7px">Names that match something in the catalogue get a
+        <b>Prep in planner</b> button — it loads the lot into the Planner with the full shopping list.
+        Anything else is fine as plain text.</div>
+
+      <div class="sec-title" style="margin-top:22px">Hacks to expect</div>
+      <div id="hackList">${(d.hacks||[]).map(hackRow).join("")}</div>
+      <button class="btn sm ghost" id="addHack" type="button">+ Add hack</button>
+
+      <div style="margin:22px 0 12px"><label class="f">Steps — one per line</label>
+        <textarea id="h_steps" style="min-height:150px" placeholder="Park the van on the east side&#10;Thermite the vault door&#10;Two on the door, two carrying">${esc(stepsOf(d).join("\n"))}</textarea>
+        <div class="tiny muted" style="margin-top:5px">They get numbered automatically. Reordering is just moving a line.</div></div>
+      ` : k==="busblock"? `
       <div class="grid2" style="margin-bottom:12px">
         <div><label class="f">What it blocks</label><input id="s_blocks" value="${esc(d.blocks)}" placeholder="Northbound tunnel, both lanes"></div>
         <div><label class="f">What you need</label><input id="s_veh" value="${esc(d.vehicle)}" placeholder="Bus, or any box truck"></div>
@@ -1306,12 +1422,12 @@ function openSpotEdit(id, kind){
 
       ${shotEditorHTML()}
 
-      <div style="margin:18px 0 12px"><label class="f">Tags</label>
+      ${k==="heist"? "" : `<div style="margin:18px 0 12px"><label class="f">Tags</label>
         <input id="s_tags" value="${esc((d.tags||[]).join(", "))}" placeholder="heli-proof, needs 2 cars, night only">
-        <div class="tiny muted" style="margin-top:5px">Comma separated. These become the filter chips.</div></div>
+        <div class="tiny muted" style="margin-top:5px">Comma separated. These become the filter chips.</div></div>`}
 
-      <div><label class="f">How to run it</label>
-        <textarea id="s_notes" placeholder="Come in from the west, back the bus across before the bend…">${esc(d.notes)}</textarea></div>
+      <div style="margin-top:18px"><label class="f">${k==="heist"? "Notes":"How to run it"}</label>
+        <textarea id="s_notes" placeholder="${k==="heist"? "Anything that doesn't fit a step" : "Come in from the west, back the bus across before the bend…"}">${esc(d.notes)}</textarea></div>
     </div>
     <div class="mfoot">
       <button class="btn ghost" data-close>Cancel</button>
@@ -1319,6 +1435,8 @@ function openSpotEdit(id, kind){
     </div>`, "wide");
 
   const shotBox = mountShotEditor(d.images);
+  if($("#addGear")) $("#addGear").onclick = ()=>$("#gearList").insertAdjacentHTML("beforeend", gearRow({name:"",qty:1}));
+  if($("#addHack")) $("#addHack").onclick = ()=>$("#hackList").insertAdjacentHTML("beforeend", hackRow({name:"",qty:1}));
 
   $("#saveSpot").onclick = async ()=>{
     const name = $("#s_name").value.trim();
@@ -1329,9 +1447,19 @@ function openSpotEdit(id, kind){
       blocks: $("#s_blocks")? $("#s_blocks").value.trim() : "",
       vehicle: $("#s_veh")? $("#s_veh").value.trim() : "",
       notes: $("#s_notes").value.trim(),
-      tags: $("#s_tags").value.split(",").map(x=>x.trim()).filter(Boolean),
+      tags: ($("#s_tags")||$("#s_tags2")||{value:""}).value.split(",").map(x=>x.trim()).filter(Boolean),
       images: []
     };
+    if(k==="heist"){
+      rec.crew  = $("#h_crew").value.trim();
+      rec.gear  = $$("#gearList .ingrow").map(r=>({
+                    name: r.querySelector(".gear-n").value.trim(),
+                    qty: Math.max(1, parseInt(r.querySelector(".gear-q").value)||1) })).filter(g=>g.name);
+      rec.hacks = $$("#hackList .ingrow").map(r=>({
+                    name: r.querySelector(".hack-n").value.trim(),
+                    qty: Math.max(1, parseInt(r.querySelector(".hack-q").value)||1) })).filter(g=>g.name);
+      rec.steps = $("#h_steps").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    }
     const btn = $("#saveSpot");
     btn.disabled = true; btn.textContent = "Saving…";
     try{
@@ -1641,7 +1769,16 @@ function openEdit(id){
           ${S.benches.map(b=>`<option value="${b.id}" ${d.benchId===b.id?"selected":""}>${esc(b.name)}</option>`).join("")}
         </select></div>
         <div><label class="f">Makes (qty)</label><input id="e_out" type="number" min="1" value="${d.outputQty||1}"></div>
-        <div><label class="f">Craft time (sec)</label><input id="e_time" type="number" min="0" step="any" value="${d.craftTime??""}"></div>
+        <div><label class="f">Craft time</label>
+          <div class="unitrow">
+            <input id="e_time" type="number" min="0" step="any" value="${timeField(d.craftTime).value}">
+            <select id="e_timeu">
+              <option value="s" ${timeField(d.craftTime).unit==="s"?"selected":""}>sec</option>
+              <option value="m" ${timeField(d.craftTime).unit==="m"?"selected":""}>min</option>
+            </select>
+          </div>
+          <div class="tiny muted" id="timePreview" style="margin-top:5px"></div>
+        </div>
         <div><label class="f">Level / rep req</label><input id="e_lvl" value="${esc(d.levelReq)}" placeholder="e.g. 3"></div>
         <div><label class="f">XP gained</label><input id="e_xp" type="number" step="any" value="${d.xp??""}"></div>
       </div>
@@ -1667,6 +1804,12 @@ function openEdit(id){
   refreshDatalist();
   $("#addIng").onclick = ()=>{ $("#ingList").insertAdjacentHTML("beforeend", ingRow({name:"",qty:1})); };
   $("#addBp").onclick = ()=>{ $("#bpList").insertAdjacentHTML("beforeend", bpRow({name:"",qty:1,consumed:false})); };
+  $("#e_time").oninput = paintTimePreview;
+  $("#e_timeu").onchange = ()=>{
+    try{ localStorage.setItem(TIMEU_KEY, $("#e_timeu").value) }catch(e){}
+    paintTimePreview();
+  };
+  paintTimePreview();
   $("#saveItem").onclick = ()=>saveItemForm(it);
 }
 function bpRow(g){
@@ -1680,6 +1823,44 @@ function bpRow(g){
     <input class="bp-q" type="number" min="1" step="1" value="${g.qty??1}" title="How many per craft" ${c?"":"disabled"}>
     <button type="button" onclick="this.parentElement.remove()">✕</button>
   </div>`;
+}
+
+function gearRow(g){
+  return `<div class="ingrow">
+    <input class="gear-n" list="dlItems" value="${esc(g.name||"")}" placeholder="Thermite, drill, a van…">
+    <input class="gear-q" type="number" min="1" step="1" value="${g.qty??1}">
+    <button type="button" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+}
+function hackRow(g){
+  return `<div class="ingrow">
+    <input class="hack-n" value="${esc(g.name||"")}" placeholder="Circle hack, keypad, thermite mini-game…">
+    <input class="hack-q" type="number" min="1" step="1" value="${g.qty??1}">
+    <button type="button" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+}
+
+/* Craft times are stored in seconds, but plenty of recipes are quoted in
+   minutes — so the form takes either and the unit you last used sticks. */
+const TIMEU_KEY = PFX+"timeunit";
+function lastTimeUnit(){ try{ return localStorage.getItem(TIMEU_KEY)==="m" ? "m":"s" }catch(e){ return "s" } }
+function timeField(seconds){
+  if(seconds==null || !isFinite(seconds)) return { value:"", unit:lastTimeUnit() };
+  if(seconds>=60){
+    const m = Math.round((seconds/60)*1000)/1000;   // 150s -> 2.5 min
+    return { value:m, unit:"m" };
+  }
+  return { value:seconds, unit:"s" };
+}
+function timeToSeconds(){
+  const v = num($("#e_time").value);
+  if(v==null) return null;
+  return $("#e_timeu").value==="m" ? v*60 : v;
+}
+function paintTimePreview(){
+  const el = $("#timePreview"); if(!el) return;
+  const sec = timeToSeconds();
+  el.textContent = sec==null ? "" : (sec<=0 ? "" : "= "+dur(sec)+" per craft");
 }
 
 function ingRow(g){
@@ -1713,7 +1894,7 @@ async function saveItemForm(existing){
     id: existing? existing.id : uid("it"),
     name, category:$("#e_cat").value.trim(), benchId:$("#e_bench").value,
     outputQty: Math.max(1, parseInt($("#e_out").value)||1),
-    craftTime: num($("#e_time").value), levelReq:$("#e_lvl").value.trim(), xp:num($("#e_xp").value),
+    craftTime: timeToSeconds(), levelReq:$("#e_lvl").value.trim(), xp:num($("#e_xp").value),
     buyCost: num($("#e_buy").value), sellPrice: num($("#e_sell").value),
     source: $("#e_src").value.trim(), notes: $("#e_notes").value.trim(),
     ingredients: ings, blueprints: bps,
@@ -2033,7 +2214,8 @@ const TABS = [
   {id:"planner",   label:"Planner",    n:()=>S.targets.length||""},
   {id:"benches",   label:"Benches",    n:()=>S.benches.length},
   {id:"dropoff",   label:"Drop Offs",  n:()=>spotsOf("dropoff").length||""},
-  {id:"busblock",  label:"Bus Blocks", n:()=>spotsOf("busblock").length||""}
+  {id:"busblock",  label:"Bus Blocks", n:()=>spotsOf("busblock").length||""},
+  {id:"heist",     label:"Heists",     n:()=>spotsOf("heist").length||""}
 ];
 
 function refreshDatalist(){
@@ -2142,6 +2324,21 @@ document.addEventListener("click", e=>{
       for(const e of (sp.images||[])){ const id = imgId(e); if(id) await dropImage(id); }
       S.spots = S.spots.filter(x=>x.id!==sp.id); closeModal(); render(); toast("Deleted");
     }).catch(()=>toast("Delete failed",1));
+    return;
+  }
+  const pr = e.target.closest("[data-prep]");
+  if(pr){
+    const h = S.spots.find(x=>x.id===pr.dataset.prep); if(!h) return;
+    let added = 0;
+    for(const g of gearOf(h)){
+      if(!S.byName.get(norm(g.name))) continue;   // free-text gear can't be planned
+      const qty = Math.max(1, parseInt(g.qty)||1);
+      const ex = S.targets.find(t=>norm(t.name)===norm(g.name));
+      if(ex) ex.qty += qty; else S.targets.push({name:g.name, qty});
+      added++;
+    }
+    closeModal(); S.tab = "planner"; render();
+    toast(added? `${added} item${added>1?"s":""} added to the plan` : "Nothing in the catalogue to plan",!added);
     return;
   }
   const sh = e.target.closest("[data-shot]"); if(sh){ openShot(sh.src); return; }
