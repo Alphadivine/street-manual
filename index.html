@@ -145,11 +145,11 @@ label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-tran
 .sec-title{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);margin:0 0 10px}
 
 /* ---------- toolbar ---------- */
-.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 12px}
 .search{position:relative;flex:1;min-width:190px}
 .search input{padding-left:34px}
 .search .ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--dim2);pointer-events:none}
-.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .chip{
   padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:transparent;
   color:var(--dim);cursor:pointer;font-size:12.5px;font-weight:600;transition:.15s;
@@ -157,26 +157,37 @@ label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-tran
 .chip:hover{color:var(--txt);border-color:var(--line2)}
 .chip.on{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.4);color:var(--acc)}
 .chip.warnchip.on{background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.4);color:var(--warn)}
+.chip.clearchip{margin-left:auto;color:var(--dim2)}
+.chip.clearchip:hover{color:var(--txt);border-color:var(--line2)}
 
 /* ---------- item grid ---------- */
-.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px;align-items:start}
+/* Rows share a height and the ingredient line clamps, so the grid reads as a
+   grid instead of a ragged wall. */
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:10px}
 .item{
-  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:13px 14px;
-  cursor:pointer;transition:.15s;position:relative;overflow:hidden;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px 13px;
+  cursor:pointer;transition:border-color .15s,background .15s;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;min-height:104px;
 }
-.item:hover{border-color:var(--line2);background:var(--panel2);transform:translateY(-1px)}
-.item .nm{font-weight:700;font-size:14.5px;margin-bottom:3px;padding-right:52px}
-.item .sub{font-size:12px;color:var(--dim2);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.item .ing{margin-top:9px;font-size:12.5px;color:var(--dim);line-height:1.45}
+.item:hover{border-color:var(--line2);background:var(--panel2)}
+.item .nm{font-weight:700;font-size:14.5px;margin-bottom:6px;padding-right:56px;line-height:1.3}
+.item .nm .bpmark{color:#9085e9;font-size:11px;vertical-align:1px}
+.item .sub{font-size:12px;color:var(--dim2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.item .sub:empty{display:none}
+.item .ing{margin-top:auto;padding-top:9px;font-size:12.5px;color:var(--dim);line-height:1.45}
 .item .ing b{color:var(--txt);font-weight:600}
-.item .badge{position:absolute;top:12px;right:12px;font-size:10.5px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:6px}
+.item .ing.clamp{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.item .badge{position:absolute;top:11px;right:12px;font-size:10px;font-weight:800;letter-spacing:.05em;padding:3px 7px;border-radius:6px}
 .badge.raw{background:rgba(148,163,184,.16);color:#94a3b8}
 .badge.bp{background:rgba(144,133,233,.18);color:#9085e9}
 .tag.tbp{background:rgba(144,133,233,.15);color:#9085e9}
 .badge.prof{background:rgba(74,222,128,.14);color:var(--acc)}
 .badge.loss{background:rgba(248,113,113,.14);color:var(--bad)}
 .badge.gap{background:rgba(251,191,36,.14);color:var(--warn)}
-.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--dim)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,.05);color:var(--dim2);white-space:nowrap}
 .tag.tbench{background:rgba(34,211,238,.12);color:var(--acc2)}
 
 /* ---------- modal ---------- */
@@ -936,6 +947,9 @@ document.addEventListener("keydown", e=>{
 function categories(){
   return [...new Set(S.items.map(i=>i.category).filter(Boolean))].sort();
 }
+// Four filters can be on at once, so one reset beats hunting three controls.
+const anyFilter = () => !!(S.q || S.fBench || S.fCat || S.fFlag);
+
 function filtered(){
   const q = norm(S.q);
   return S.items.filter(it=>{
@@ -966,19 +980,22 @@ function viewCatalogue(){
       <span class="ico">⌕</span>
       <input id="q" placeholder="Search items, ingredients, benches…  ( / )" value="${esc(S.q)}">
     </div>
-    <select id="fBench" style="width:auto;min-width:150px">
+    <select id="fBench" style="width:auto;min-width:140px">
       <option value="">All benches</option>
       ${S.benches.map(b=>`<option value="${b.id}" ${S.fBench===b.id?"selected":""}>${esc(b.name)}</option>`).join("")}
     </select>
+    ${cats.length? `<select id="fCat" style="width:auto;min-width:140px">
+      <option value="">All categories</option>
+      ${cats.map(c=>`<option value="${esc(c)}" ${S.fCat===c?"selected":""}>${esc(c)}</option>`).join("")}
+    </select>`:""}
   </div>
   <div class="chips" style="margin:-6px 0 16px">
-    <button class="chip ${S.fFlag===""?"on":""}" data-flag="">Everything <span class="tiny">${S.items.length}</span></button>
     <button class="chip ${S.fFlag==="craft"?"on":""}" data-flag="craft">Craftable</button>
     <button class="chip ${S.fFlag==="raw"?"on":""}" data-flag="raw">Materials</button>
     ${S.items.some(isBlueprint)? `<button class="chip ${S.fFlag==="bp"?"on":""}" data-flag="bp">Blueprints <span class="tiny">${S.items.filter(isBlueprint).length}</span></button>`:""}
     ${gapCount? `<button class="chip warnchip ${S.fFlag==="gaps"?"on":""}" data-flag="gaps">Needs attention <span class="tiny">${gapCount}</span></button>`:""}
     ${srcCount? `<button class="chip ${S.fFlag==="nosrc"?"on":""}" data-flag="nosrc">No source yet <span class="tiny">${srcCount}</span></button>`:""}
-    ${cats.map(c=>`<button class="chip ${S.fCat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("")}
+    ${anyFilter()? `<button class="chip clearchip" id="clearFilters">✕ Clear${list.length!==S.items.length? ` <span class="tiny">${list.length} of ${S.items.length}</span>`:""}</button>`:""}
   </div>
   ${ list.length ? `<div class="items">${list.map(itemCard).join("")}</div>`
     : `<div class="empty"><div class="big">⚒</div>
@@ -1001,7 +1018,7 @@ function itemCard(it){
     if(!badge && gaps.length) badge = `<span class="badge gap">${gaps.length} gap${gaps.length>1?"s":""}</span>`;
   }
   const ings = craft
-    ? `<div class="ing">${it.ingredients.slice(0,6).map(g=>`<b>${esc(String(g.qty??"?"))}×</b> ${esc(g.name)}`).join(" · ")}${it.ingredients.length>6?` <span class="muted">+${it.ingredients.length-6} more</span>`:""}</div>`
+    ? `<div class="ing clamp">${it.ingredients.map(g=>`<b>${esc(String(g.qty??"?"))}×</b> ${esc(g.name)}`).join(" · ")}</div>`
     : (()=>{
         // nothing to say about a bare material — an empty line reads better than
         // "source not set" nagging from every card
@@ -1010,15 +1027,15 @@ function itemCard(it){
         if(S.money && num(it.buyCost)!=null) bits.push(money(it.buyCost)+" ea");
         return bits.length? `<div class="ing muted">${bits.join(" · ")}</div>` : "";
       })();
+  // The category is already a filter, so it doesn't earn a chip on every card,
+  // and a needed blueprint is a mark by the name rather than a fifth tag.
   return `<div class="item" data-id="${it.id}">
     ${badge}
-    <div class="nm">${esc(it.name)}${(it.outputQty||1)>1?` <span class="muted tiny">×${it.outputQty}</span>`:""}</div>
+    <div class="nm">${bpsOf(it).length? `<span class="bpmark" title="needs a blueprint">◆</span> `:""}${esc(it.name)}${(it.outputQty||1)>1?` <span class="muted tiny">×${it.outputQty}</span>`:""}</div>
     <div class="sub">
       ${it.benchId? `<span class="tag tbench" style="${benchTagStyle(it.benchId)}">${esc(benchName(it.benchId))}</span>`:""}
-      ${it.category? `<span class="tag">${esc(it.category)}</span>`:""}
       ${num(it.craftTime)!=null? `<span class="tag">${dur(it.craftTime)}</span>`:""}
       ${it.levelReq? `<span class="tag">lvl ${esc(it.levelReq)}</span>`:""}
-      ${bpsOf(it).length? `<span class="tag tbp">◆ blueprint${bpsOf(it).length>1?"s":""}</span>`:""}
     </div>
     ${ings}
   </div>`;
@@ -1909,7 +1926,7 @@ async function saveItemForm(existing){
     // materials, blueprints flagged as blueprints so they sort correctly
     let created = 0;
     const stub = (nm, isBp) => ({
-      id:uid("it"), name:nm.trim(), category: isBp? "Blueprint":"", benchId:"", outputQty:1,
+      id:uid("it"), name:nm.trim(), category:"", benchId:"", outputQty:1,
       craftTime:null, levelReq:"", xp:null, buyCost:null, sellPrice:null,
       source:"", notes:"", ingredients:[], blueprints:[], blueprint: !!isBp
     });
@@ -2249,9 +2266,13 @@ function wireView(){
   }
   const fb = $("#fBench");
   if(fb) fb.onchange = e=>{ S.fBench=e.target.value; render(); };
+  const fc = $("#fCat");
+  if(fc) fc.onchange = e=>{ S.fCat=e.target.value; render(); };
 
-  $$("[data-flag]").forEach(b=> b.onclick = ()=>{ S.fFlag = S.fFlag===b.dataset.flag? "" : b.dataset.flag; if(b.dataset.flag==="") S.fFlag=""; render(); });
-  $$("[data-cat]").forEach(b=> b.onclick = ()=>{ S.fCat = S.fCat===b.dataset.cat? "" : b.dataset.cat; render(); });
+  // clicking an active chip turns it back off
+  $$("[data-flag]").forEach(b=> b.onclick = ()=>{ S.fFlag = S.fFlag===b.dataset.flag? "" : b.dataset.flag; render(); });
+  const cf = $("#clearFilters");
+  if(cf) cf.onclick = ()=>{ S.q=""; S.fBench=""; S.fCat=""; S.fFlag=""; render(); };
 
   const sq = $("#sq");
   if(sq) sq.oninput = e=>{ S.spotQ = e.target.value; const p=e.target.selectionStart; render(); const n=$("#sq"); n.focus(); n.setSelectionRange(p,p); };

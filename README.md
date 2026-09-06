@@ -19,8 +19,15 @@ own — it runs entirely in the browser and stores shared data in a free
 
 ### Catalogue
 Every item, searchable by name, category, bench **or ingredient** — "show me everything that eats
-copper wire". Filter chips for craftable / materials / needs attention. Each card shows the bench,
-craft time and level requirement.
+copper wire". Chips filter by kind (craftable / materials / blueprints / needs attention); bench and
+category are dropdowns beside the search box, so the filter row stays one line however many
+categories you end up with. Clicking an active chip turns it off, and a **Clear** appears on the
+right whenever anything is filtered — it resets the chips, both dropdowns and the search in one go,
+and tells you how many of the total you're looking at.
+
+Cards carry the bench, craft time and level requirement, with a ◆ by the name when a blueprint is
+needed. The ingredient line clamps to two lines so every card in a row is the same height — the
+grid reads as a grid rather than a ragged wall. Open an item for the full list.
 
 ### Item detail
 The direct recipe, then the full raw-material rollup all the way down, the sub-crafts you have to
