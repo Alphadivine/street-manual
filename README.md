@@ -11,7 +11,7 @@ Street Manual is a single self-contained HTML file. No build step, no framework,
 own — it runs entirely in the browser and stores shared data in a free
 [Firebase Firestore](https://firebase.google.com/products/firestore) database.
 
-**Live site:**https://alphadivine.github.io/street-manual/
+**Live site:** https://alphadivine.github.io/street-manual/
 
 ---
 
