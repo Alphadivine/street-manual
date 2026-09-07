@@ -11,7 +11,7 @@ Street Manual is a single self-contained HTML file. No build step, no framework,
 own — it runs entirely in the browser and stores shared data in a free
 [Firebase Firestore](https://firebase.google.com/products/firestore) database.
 
-> **Live site:** _add your GitHub Pages URL here once deployed, e.g._ `https://yourname.github.io/street-manual/`
+> **Live site:** **https://alphadivine.github.io/street-manual/**
 
 ---
 
@@ -81,6 +81,23 @@ The guide **adapts to who's reading it**. A read-only viewer is told plainly why
 button and how to unlock editing; someone already unlocked gets the section on adding items,
 auto-created ingredients, craft-time units and pasting screenshots instead.
 
+### Keeping it current
+
+The guide is **versioned**. `GUIDE_VERSION` and a `WHATS_NEW` list sit next to `openGuide()` in the
+file. Ship something a user needs to know → bump the version and add a line. Anyone who read an
+older version then gets a green dot on the **How to use** button and a **New since you last looked**
+block at the top of the guide; it clears once they've read it. A first-time reader never sees that
+block, just the guide.
+
+This matters because the guide only auto-opens once. Updating it without telling returning readers
+would be updating it for nobody.
+
+The test suite has a **coverage check** that fails if the guide stops mentioning any user-facing
+feature — Planner, blueprints, heists, bench colours, paste, undo, the edit code and so on. It
+caught a real gap the first time it ran (an editor reading the guide was never told the edit code
+existed), which is exactly the sort of drift it's there to prevent.
+
+
 ---
 
 ## 💰 Heists
@@ -103,6 +120,25 @@ change is needed** to add them.
 
 ---
 
+## 🔀 More than one recipe
+
+Some things can be made more than one way — usually different ingredients, sometimes a different
+bench. An item holds as many recipes as you need.
+
+- **One card, not two.** The catalogue still shows one *Codeine*, marked **2 ways**. Opening it
+  lists every recipe with its own bench, time, yield and ingredients.
+- **The Planner lets you choose.** When a planned item has alternatives, a picker appears at the top
+  of the plan; switch route and the shopping list, bench stops and total time all update. Your
+  choice is remembered on your own device.
+- **The first recipe is the default**, so a plan always works without touching anything.
+- **Adding one:** *Other ways to make it* at the bottom of the item form. Each alternative gets its
+  own bench, makes-quantity, craft time and ingredient list, with its own paste box.
+
+Existing items are untouched — the recipe already on an item **is** recipe 1, so nothing had to be
+migrated and anything with a single recipe behaves exactly as before.
+
+---
+
 ## 📐 Blueprints
 
 Some recipes need a blueprint as well as ingredients, so blueprints are their own thing rather than
@@ -122,6 +158,34 @@ something you pick up at the hardware store.
 The planner gives them a **Blueprints needed** panel with a tick-box for the ones you own (kept on
 your own device, like on-hand counts) and tells you plainly what you're missing — so you don't get
 to the bench and find you can't start.
+
+---
+
+## ⌨️ Pasting a list of ingredients
+
+The slowest part of keeping this up to date is typing ingredient rows one at a time, so the item
+form has a **Paste a list** button. Drop in whatever shape the bench gives you:
+
+```
+20x Iron, 25x Metal Scrap, 1x Oak Plank, 8x Plastic
+```
+
+It also copes with one-per-line, `Iron x20`, `Copper: 2`, `20 Iron`, bullets, a leading
+`INGREDIENTS` header, and the app's own card format (`15× Aluminium · 30× Iron …`). A name that
+starts with a digit — `9mm Rounds` — survives intact. It previews how many it found before you
+commit, and drops the blank row that's already sitting there.
+
+---
+
+## ↩️ Undo
+
+Deleting an item, bench, spot or heist leaves an **Undo** button in the toast for seven seconds.
+Stored screenshots aren't cleaned up until that window closes, so an undone delete comes back whole
+— and undoing a bench deletion puts its recipes back on it too.
+
+A recipe also can't name **itself** as an ingredient or blueprint any more; that's refused at save.
+An indirect loop (A needs B, B needs A) warns and names the chain, but lets you save it in case
+you're halfway through an edit.
 
 ---
 
@@ -315,7 +379,7 @@ Then — and this is the step everyone forgets — add your Pages host to
 **Firebase → Authentication → Settings → Authorized domains**:
 
 ```
-yourname.github.io
+alphadivine.github.io
 ```
 
 Hostname only, no `https://` and no path. Miss it and the app loads and reads fine, but unlocking

@@ -184,6 +184,7 @@ label.f{display:block;font-size:11px;font-weight:700;color:var(--dim2);text-tran
 .badge.raw{background:rgba(148,163,184,.16);color:#94a3b8}
 .badge.bp{background:rgba(144,133,233,.18);color:#9085e9}
 .tag.tbp{background:rgba(144,133,233,.15);color:#9085e9}
+.tag.tmulti{background:rgba(34,211,238,.13);color:var(--acc2)}
 .badge.prof{background:rgba(74,222,128,.14);color:var(--acc)}
 .badge.loss{background:rgba(248,113,113,.14);color:var(--bad)}
 .badge.gap{background:rgba(251,191,36,.14);color:var(--warn)}
@@ -234,6 +235,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .ingrow{display:grid;grid-template-columns:1fr 92px 34px;gap:8px;margin-bottom:7px;align-items:center}
 .ingrow button{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);cursor:pointer;height:36px}
 .ingrow button:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
+.altblock{border:1px solid var(--line2);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:rgba(0,0,0,.16)}
+.althead{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.althead .alt-rm{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);
+  cursor:pointer;height:36px;width:36px;flex:none}
+.althead .alt-rm:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
+
+.pastebox{margin-top:10px;border:1px solid var(--line2);border-radius:12px;padding:10px;background:rgba(0,0,0,.2)}
+.pastebox textarea{min-height:88px;font-size:13px}
+.pasterow{display:flex;align-items:center;gap:8px;margin-top:8px}
 .bprow{display:grid;grid-template-columns:1fr 108px 72px 34px;gap:8px;margin-bottom:7px;align-items:center}
 @media(max-width:560px){.bprow{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
   .bprow .bp-n{grid-column:1/-1}}
@@ -258,6 +268,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .benchgroup h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
 .benchgroup h4 .step{width:22px;height:22px;border-radius:7px;background:rgba(34,211,238,.15);color:var(--acc2);display:grid;place-items:center;font-size:11px;font-weight:800}
 .benchgroup h4 .loc{font-size:11.5px;color:var(--dim2);font-weight:500}
+.pickrow{display:grid;grid-template-columns:1fr minmax(180px,260px);gap:10px;align-items:center;
+  padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.pickrow:last-child{border-bottom:none}
+.pickrow .nm{font-weight:650;font-size:13.5px}
+@media(max-width:560px){.pickrow{grid-template-columns:1fr}}
 
 /* ---------- bench cards ---------- */
 .benches{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start}
@@ -319,10 +334,25 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .guide table.legend td{padding:9px 10px 9px 0;vertical-align:top;color:var(--dim)}
 .guide table.legend td:first-child{width:120px;white-space:nowrap}
 .guide table.legend td b{color:var(--txt)}
+.guide .whatsnew{
+  border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.07);
+  border-radius:12px;padding:12px 14px;margin-bottom:16px;
+}
+.guide .whatsnew ul{margin:0;padding-left:18px;color:var(--dim)}
+.guide .whatsnew li{padding:4px 0}
+.guide .whatsnew li b{color:var(--txt)}
+#btnHelp.hasnews{color:var(--acc);border-color:rgba(74,222,128,.4)}
+#btnHelp.hasnews::after{
+  content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--acc);margin-left:6px;vertical-align:2px;box-shadow:0 0 6px var(--acc);
+}
+
 .guide kbd{
   display:inline-block;padding:1px 6px;border-radius:5px;font-size:12px;font-family:inherit;
   background:rgba(255,255,255,.09);border:1px solid var(--line2);color:var(--txt);
 }
+
+.recmeta{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
 
 ol.steps{margin:0 0 18px;padding-left:22px}
 ol.steps li{padding:5px 0 5px 4px;border-bottom:1px solid rgba(255,255,255,.05)}
@@ -370,6 +400,12 @@ ol.steps li::marker{color:var(--acc);font-weight:800}
   box-shadow:var(--shadow);max-width:90vw;
 }
 #toast.show{opacity:1;transform:translateX(-50%)}
+#toast.show{pointer-events:auto}
+#toast .undo{
+  background:transparent;border:1px solid var(--line2);color:var(--acc);
+  padding:3px 10px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12.5px;margin-left:4px;
+}
+#toast .undo:hover{background:rgba(74,222,128,.14)}
 #toast.err{border-color:rgba(248,113,113,.5);color:#fecaca}
 
 .swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -482,6 +518,30 @@ function dur(sec){
 function toast(msg,err){
   const t=$("#toast"); t.textContent=msg; t.className = err?"show err":"show";
   clearTimeout(t._t); t._t=setTimeout(()=>t.className="",2600);
+}
+
+/* Delete is one confirm away from losing something someone spent a while on,
+   and several people can edit now — so nothing is really gone for a few
+   seconds, and any stored images wait until the window closes. */
+function offerUndo(msg, restore, cleanup){
+  const t = $("#toast");
+  clearTimeout(t._t);
+  t.innerHTML = "";
+  t.append(msg + "  ");
+  const b = document.createElement("button");
+  b.className = "undo"; b.textContent = "Undo";
+  t.append(b);
+  t.className = "show";
+
+  let done = false;
+  const finish = ()=>{ if(done) return; done = true; t.className=""; t.innerHTML=""; cleanup && cleanup(); };
+  b.onclick = async ()=>{
+    if(done) return;
+    done = true; t.className=""; t.innerHTML="";
+    try{ await restore(); render(); toast("Put back"); }
+    catch(e){ toast("Couldn't undo: "+(e.message||e),1); }
+  };
+  t._t = setTimeout(finish, 7000);
 }
 
 /* =====================================================================
@@ -724,11 +784,14 @@ const S = {
   tab:"catalogue",
   q:"", fBench:"", fCat:"", fFlag:"",
   targets:[],         // planner: [{name, qty}]
+  pick:{},            // planner: which recipe to use for an item with several
   useStock:true,
   money:false         // money tracking is off by default — toggle in the Data panel
 };
 try{ S.stock = JSON.parse(localStorage.getItem(LK.stock)) || {} }catch(e){ S.stock={} }
 try{ S.money = localStorage.getItem(LK.money)==="1" }catch(e){}
+try{ S.pick = JSON.parse(localStorage.getItem(PFX+"pick")) || {} }catch(e){ S.pick = {} }
+const savePick = ()=>{ try{ localStorage.setItem(PFX+"pick", JSON.stringify(S.pick)) }catch(e){} };
 const saveStock = ()=>{ try{ localStorage.setItem(LK.stock, JSON.stringify(S.stock)) }catch(e){} };
 const saveMoney = ()=>{ try{ localStorage.setItem(LK.money, S.money?"1":"0") }catch(e){} };
 
@@ -736,7 +799,34 @@ function reindex(){
   S.byName = new Map();
   for(const it of S.items) S.byName.set(norm(it.name), it);
 }
-const isCraftable = it => !!(it && it.ingredients && it.ingredients.length);
+/* An item can be made more than one way. The first recipe stays on the item
+   itself exactly as before — extra ones live in `alts` — so nothing already
+   saved has to change shape, and anything with a single recipe behaves as it
+   always did. */
+function recipesOf(it){
+  if(!it) return [];
+  const one = (r, key, label) => ({
+    key, label: label || r.label || "",
+    benchId:   r.benchId || "",
+    outputQty: Math.max(1, r.outputQty || 1),
+    craftTime: r.craftTime ?? null,
+    levelReq:  r.levelReq || "",
+    xp:        r.xp ?? null,
+    ingredients: r.ingredients || [],
+    blueprints:  r.blueprints  || []
+  });
+  return [ one(it, "r0"), ...(it.alts || []).map((a,i)=>one(a, "r"+(i+1))) ];
+}
+const altCount   = it => ((it && it.alts) || []).length;
+const isCraftable = it => recipesOf(it).some(r => r.ingredients.length > 0);
+// which recipe a given item is being planned with
+function pickedRecipe(it, pick){
+  const recs = recipesOf(it);
+  const want = pick && pick[norm(it.name)];
+  return recs.find(r => r.key === want) || recs[0];
+}
+const allIngredients = it => recipesOf(it).flatMap(r => r.ingredients);
+const allBenches     = it => [...new Set(recipesOf(it).map(r=>r.benchId).filter(Boolean))];
 const isBlueprint = it => !!(it && it.blueprint);
 const bpsOf = it => (it && it.blueprints) || [];
 // A blueprint you keep is owned or not; one that burns is counted like anything
@@ -785,6 +875,8 @@ function rollup(rootName, qty, opts){
   const steps   = new Map();  // key -> {item, crafts, depth}
   const fromHave= new Map();  // key -> qty pulled from stock
   const bps     = new Map();  // key -> {name, item, qty, unlock}
+  const choices = new Map();  // key -> {item, rec} for anything with more than one recipe
+  const pick    = opts.pick || {};
   const unknown = new Set();
   let loop = false, loopChain = null;
 
@@ -820,6 +912,8 @@ function rollup(rootName, qty, opts){
     // a blueprint isn't something you buy at the hardware store — own bucket
     if(isBlueprint(it)){ addBp(it.name, need, false, it); return; }
     if(!isCraftable(it)){ addRaw(key, it.name, need, it); return; }
+    const rec = pickedRecipe(it, pick);
+    if(altCount(it)) choices.set(key, { item:it, rec });
     const noteLoop = () => {
       loop = true;
       if(!loopChain) loopChain = [...path, key]
@@ -829,9 +923,9 @@ function rollup(rootName, qty, opts){
     if(path.has(key)){ noteLoop(); addRaw(key, it.name, need, it); return; }
     if(depth > 24){ noteLoop(); addRaw(key, it.name, need, it); return; }
 
-    const per    = Math.max(1, it.outputQty||1);
+    const per    = Math.max(1, rec.outputQty||1);
     const crafts = Math.ceil(need/per);
-    const s = steps.get(key) || { item:it, crafts:0, depth:0 };
+    const s = steps.get(key) || { item:it, rec, crafts:0, depth:0 };
     s.crafts += crafts;
     s.depth   = Math.max(s.depth, depth);
     steps.set(key, s);
@@ -842,7 +936,7 @@ function rollup(rootName, qty, opts){
     // Following one down is only safe when it's genuinely a craftable blueprint
     // that isn't already above us: a blueprint sharing a name with the item it
     // unlocks would otherwise send us round in circles.
-    for(const bp of bpsOf(it)){
+    for(const bp of rec.blueprints){
       if(!bp.name) continue;
       const bpKey = norm(bp.name);
       const bpIt  = S.byName.get(bpKey);
@@ -855,7 +949,7 @@ function rollup(rootName, qty, opts){
       }
     }
 
-    for(const ing of it.ingredients){
+    for(const ing of rec.ingredients){
       const q = (num(ing.qty)||0) * crafts;
       if(q>0) walk(ing.name, q, depth+1, p2);
     }
@@ -876,7 +970,7 @@ function rollup(rootName, qty, opts){
   }
   let time = 0, missingTime = 0;
   for(const [k,s] of steps){
-    const t = num(s.item.craftTime);
+    const t = num(s.rec.craftTime);
     if(t==null) missingTime++; else time += t*s.crafts;
   }
 
@@ -884,6 +978,7 @@ function rollup(rootName, qty, opts){
     raw:[...raw.values()].sort((a,b)=>a.name.localeCompare(b.name)),
     steps:[...steps.values()].sort((a,b)=> b.depth-a.depth || a.item.name.localeCompare(b.item.name)),
     blueprints:[...bps.values()].sort((a,b)=>a.name.localeCompare(b.name)),
+    choices:[...choices.values()].sort((a,b)=>a.item.name.localeCompare(b.item.name)),
     fromHave, unknown:[...unknown], loop, loopChain, cost, missingCost, time, missingTime
   };
 }
@@ -892,7 +987,7 @@ function rollup(rootName, qty, opts){
 function rollupMany(targets, opts){
   const merged = { raw:new Map(), steps:new Map(), fromHave:new Map(), unknown:new Set(), loop:false, cost:0, missingCost:0, time:0, missingTime:0 };
   // Do it as one walk so shared sub-components and stock are pooled correctly.
-  const fake = { name:"__plan__", outputQty:1, craftTime:0, blueprints:[],
+  const fake = { name:"__plan__", outputQty:1, craftTime:0, blueprints:[], alts:[],
                  ingredients: targets.map(t=>({name:t.name, qty:t.qty})) };
   S.byName.set("__plan__", fake);
   const r = rollup("__plan__", 1, opts);
@@ -902,13 +997,15 @@ function rollupMany(targets, opts){
   return r;
 }
 
-function itemEconomics(it){
+function itemEconomics(it, rec){
   if(!isCraftable(it)) return null;
-  const r = rollup(it.name, Math.max(1,it.outputQty||1), {useStock:false});
+  rec = rec || recipesOf(it)[0];
+  const per = Math.max(1, rec.outputQty||1);
+  const r = rollup(it.name, per, { useStock:false, pick:{ [norm(it.name)]: rec.key } });
   const sell = num(it.sellPrice);
-  const revenue = sell==null? null : sell*Math.max(1,it.outputQty||1);
+  const revenue = sell==null? null : sell*per;
   const profit  = (revenue==null || r.missingCost>0) ? null : revenue - r.cost;
-  return { ...r, revenue, profit };
+  return { ...r, revenue, profit, per };
 }
 
 // "Needs attention" means the app will give you a wrong or incomplete answer —
@@ -917,12 +1014,15 @@ function itemEconomics(it){
 function gapsOf(it){
   const g = [];
   if(isCraftable(it)){
-    if(!it.benchId) g.push("no bench");                       // breaks the bench route
-    if(num(it.craftTime)==null) g.push("no craft time");      // breaks time totals
+    const recs = recipesOf(it), many = recs.length > 1;
+    recs.forEach((r,i)=>{
+      const tag = many ? ` (recipe ${i+1})` : "";
+      if(!r.benchId) g.push("no bench"+tag);                       // breaks the bench route
+      if(num(r.craftTime)==null) g.push("no craft time"+tag);      // breaks time totals
+      for(const ing of r.ingredients){ if(!S.byName.get(norm(ing.name))) g.push("unknown: "+ing.name); }
+      for(const bp of r.blueprints){ if(bp.name && !S.byName.get(norm(bp.name))) g.push("unknown blueprint: "+bp.name); }
+    });
     if(S.money && num(it.sellPrice)==null) g.push("no sell price");
-    // an ingredient that doesn't exist can't be costed or broken down
-    for(const ing of it.ingredients){ if(!S.byName.get(norm(ing.name))) g.push("unknown: "+ing.name); }
-    for(const bp of bpsOf(it)){ if(bp.name && !S.byName.get(norm(bp.name))) g.push("unknown blueprint: "+bp.name); }
   }else{
     if(S.money && num(it.buyCost)==null) g.push("no cost");   // breaks cost totals
   }
@@ -981,7 +1081,7 @@ const anyFilter = () => !!(S.q || S.fBench || S.fCat || S.fFlag);
 function filtered(){
   const q = norm(S.q);
   return S.items.filter(it=>{
-    if(S.fBench && it.benchId!==S.fBench) return false;
+    if(S.fBench && !allBenches(it).includes(S.fBench)) return false;
     if(S.fCat && it.category!==S.fCat) return false;
     if(S.fFlag==="craft" && !isCraftable(it)) return false;
     if(S.fFlag==="raw" && (isCraftable(it) || isBlueprint(it))) return false;
@@ -991,8 +1091,8 @@ function filtered(){
     if(!q) return true;
     if(norm(it.name).includes(q)) return true;
     if(norm(it.category).includes(q)) return true;
-    if(norm(benchName(it.benchId)).includes(q)) return true;
-    return (it.ingredients||[]).some(g=>norm(g.name).includes(q));
+    if(allBenches(it).some(b=>norm(benchName(b)).includes(q))) return true;
+    return allIngredients(it).some(g=>norm(g.name).includes(q));
   }).sort((a,b)=>a.name.localeCompare(b.name));
 }
 
@@ -1034,6 +1134,7 @@ function viewCatalogue(){
 
 function itemCard(it){
   const craft = isCraftable(it);
+  const r0    = recipesOf(it)[0];          // the card shows the first recipe
   const gaps  = gapsOf(it);
   let badge = "";
   if(isBlueprint(it)) badge = `<span class="badge bp">BLUEPRINT</span>`;
@@ -1046,7 +1147,7 @@ function itemCard(it){
     if(!badge && gaps.length) badge = `<span class="badge gap">${gaps.length} gap${gaps.length>1?"s":""}</span>`;
   }
   const ings = craft
-    ? `<div class="ing clamp">${it.ingredients.map(g=>`<b>${esc(String(g.qty??"?"))}×</b> ${esc(g.name)}`).join(" · ")}</div>`
+    ? `<div class="ing clamp">${r0.ingredients.map(g=>`<b>${esc(String(g.qty??"?"))}×</b> ${esc(g.name)}`).join(" · ")}</div>`
     : (()=>{
         // nothing to say about a bare material — an empty line reads better than
         // "source not set" nagging from every card
@@ -1059,11 +1160,12 @@ function itemCard(it){
   // and a needed blueprint is a mark by the name rather than a fifth tag.
   return `<div class="item" data-id="${it.id}">
     ${badge}
-    <div class="nm">${bpsOf(it).length? `<span class="bpmark" title="needs a blueprint">◆</span> `:""}${esc(it.name)}${(it.outputQty||1)>1?` <span class="muted tiny">×${it.outputQty}</span>`:""}</div>
+    <div class="nm">${r0.blueprints.length? `<span class="bpmark" title="needs a blueprint">◆</span> `:""}${esc(it.name)}${r0.outputQty>1?` <span class="muted tiny">×${r0.outputQty}</span>`:""}</div>
     <div class="sub">
-      ${it.benchId? `<span class="tag tbench" style="${benchTagStyle(it.benchId)}">${esc(benchName(it.benchId))}</span>`:""}
-      ${num(it.craftTime)!=null? `<span class="tag">${dur(it.craftTime)}</span>`:""}
-      ${it.levelReq? `<span class="tag">lvl ${esc(it.levelReq)}</span>`:""}
+      ${allBenches(it).map(b=>`<span class="tag tbench" style="${benchTagStyle(b)}">${esc(benchName(b))}</span>`).join("")}
+      ${num(r0.craftTime)!=null? `<span class="tag">${dur(r0.craftTime)}</span>`:""}
+      ${r0.levelReq? `<span class="tag">lvl ${esc(r0.levelReq)}</span>`:""}
+      ${altCount(it)? `<span class="tag tmulti">${altCount(it)+1} ways</span>`:""}
     </div>
     ${ings}
   </div>`;
@@ -1078,7 +1180,7 @@ function viewBenches(){
     <div class="tiny" style="margin-bottom:16px">Add every crafting bench in the city — then each recipe gets tagged to one.</div>
     ${S.canEdit? `<button class="btn primary" id="addBench1">Add a bench</button>`:""}</div>`;
 
-  const unassigned = S.items.filter(i=>isCraftable(i) && !i.benchId);
+  const unassigned = S.items.filter(i=>isCraftable(i) && !allBenches(i).length);
   return `
   <div class="toolbar" style="justify-content:space-between">
     <div class="sec-title" style="margin:0">${S.benches.length} bench${S.benches.length>1?"es":""}</div>
@@ -1086,7 +1188,7 @@ function viewBenches(){
   </div>
   <div class="benches">
     ${S.benches.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(b=>{
-      const mine = S.items.filter(i=>i.benchId===b.id).sort((x,y)=>x.name.localeCompare(y.name));
+      const mine = S.items.filter(i=>allBenches(i).includes(b.id)).sort((x,y)=>x.name.localeCompare(y.name));
       const c = benchColor(b.id);
       const cover = imgThumb((b.images||[])[0]);
       return `<div class="bench" style="border-left:3px solid ${c}">
@@ -1117,7 +1219,7 @@ function viewBenches(){
    VIEW: PLANNER
    ===================================================================== */
 function viewPlanner(){
-  const r = S.targets.length ? rollupMany(S.targets,{useStock:S.useStock}) : null;
+  const r = S.targets.length ? rollupMany(S.targets,{useStock:S.useStock, pick:S.pick}) : null;
 
   const left = `<div class="card">
     <div class="sec-title">What are you making?</div>
@@ -1155,7 +1257,7 @@ function viewPlanner(){
   shop.sort((a,b)=> (b.qty>0)-(a.qty>0) || a.name.localeCompare(b.name));
   const groups = {};
   for(const s of r.steps){
-    const k = s.item.benchId || "__none__";
+    const k = s.rec.benchId || "__none__";
     (groups[k] = groups[k] || {depth:-1, steps:[]});
     groups[k].steps.push(s);
     groups[k].depth = Math.max(groups[k].depth, s.depth);
@@ -1185,6 +1287,23 @@ function viewPlanner(){
         ${r.loopChain? `<div style="margin-bottom:8px;font-weight:650">${r.loopChain.map(esc).join(" → ")}</div>`:""}
         <div class="tiny">That chain comes back to where it started, so the totals below are a best guess.
         Usually it means something lists itself as its own ingredient or blueprint — open the first item above and check.</div>
+      </div>`:""}
+
+      ${r.choices.length? `<div class="card" style="margin-bottom:16px">
+        <div class="sec-title">More than one way to make these</div>
+        <div class="tiny muted" style="margin-bottom:10px">Switch a route and everything below updates.</div>
+        ${r.choices.map(c=>`<div class="pickrow">
+          <span class="nm">${esc(c.item.name)}</span>
+          <select data-pickfor="${esc(c.item.name)}">
+            ${recipesOf(c.item).map((rc,i)=>{
+              const bits = [rc.benchId? benchName(rc.benchId) : "no bench"];
+              if(num(rc.craftTime)!=null) bits.push(dur(rc.craftTime));
+              if(rc.outputQty>1) bits.push("makes "+rc.outputQty);
+              return `<option value="${rc.key}" ${rc.key===c.rec.key?"selected":""}>${
+                esc(rc.label || "Recipe "+(i+1))} — ${esc(bits.join(" · "))}</option>`;
+            }).join("")}
+          </select>
+        </div>`).join("")}
       </div>`:""}
 
       ${r.blueprints.length? `<div class="card" style="margin-bottom:16px">
@@ -1241,8 +1360,8 @@ function viewPlanner(){
               <tbody>${groups[k].steps.map(s=>`<tr>
                 <td><span class="nm craftable" data-id="${s.item.id}" style="color:var(--acc2);cursor:pointer">${esc(s.item.name)}</span></td>
                 <td class="num mono">${s.crafts}</td>
-                <td class="num mono">${s.crafts*Math.max(1,s.item.outputQty||1)}</td>
-                <td class="num mono">${num(s.item.craftTime)!=null? dur(s.item.craftTime*s.crafts) : "—"}</td>
+                <td class="num mono">${s.crafts*Math.max(1,s.rec.outputQty||1)}</td>
+                <td class="num mono">${num(s.rec.craftTime)!=null? dur(s.rec.craftTime*s.crafts) : "—"}</td>
               </tr>`).join("")}</tbody>
             </table></div>
           </div>`;
@@ -1661,9 +1780,9 @@ function openItem(id){
   const it = S.items.find(x=>x.id===id); if(!it) return;
   const craft = isCraftable(it);
   const e = craft ? itemEconomics(it) : null;
-  const usedIn = S.items.filter(x=>(x.ingredients||[]).some(g=>norm(g.name)===norm(it.name)));
+  const usedIn = S.items.filter(x=>allIngredients(x).some(g=>norm(g.name)===norm(it.name)));
   const gaps = gapsOf(it);
-  const per = Math.max(1, it.outputQty||1);
+  const per = Math.max(1, recipesOf(it)[0].outputQty||1);
 
   const moneyStats = craft ? `
       <div class="stat"><div class="k">Cost to craft</div><div class="v gold">${e.missingCost? "—":money(e.cost)}</div>
@@ -1687,21 +1806,32 @@ function openItem(id){
       <div class="stat"><div class="k">Used in</div><div class="v">${usedIn.length}</div></div>
     </div>`;
 
-  const direct = craft ? `
-    <div class="sec-title">Recipe${per>1?` — makes ${per}`:""}</div>
+  // every way of making it, not just the first
+  const recs = craft ? recipesOf(it) : [];
+  const direct = craft ? recs.map((r,i)=>`
+    <div class="sec-title">${recs.length>1
+        ? `${r.label? esc(r.label) : "Recipe "+(i+1)}${i===0?" · the one the planner starts with":""}`
+        : "Recipe"}${r.outputQty>1?` — makes ${r.outputQty}`:""}</div>
+    <div class="recmeta">
+      ${r.benchId? `<span class="tag tbench" style="${benchTagStyle(r.benchId)}">${esc(benchName(r.benchId))}</span>`
+                 : `<span class="tag" style="color:var(--warn)">no bench set</span>`}
+      ${num(r.craftTime)!=null? `<span class="tag">${dur(r.craftTime)}</span>`:""}
+      ${r.levelReq? `<span class="tag">lvl ${esc(r.levelReq)}</span>`:""}
+      ${r.blueprints.length? `<span class="tag tbp">◆ ${r.blueprints.map(b=>esc(b.name)).join(", ")}</span>`:""}
+    </div>
     <div class="tree" style="margin-bottom:18px">
-      ${it.ingredients.map(g=>{
+      ${r.ingredients.map(g=>{
         const sub = S.byName.get(norm(g.name));
         const isC = isCraftable(sub);
         return `<div class="tnode ${sub?"":"unknown"}">
           <span class="q">${esc(String(g.qty??"?"))}×</span>
           <span class="nm ${sub?"craftable":""}" ${sub?`data-id="${sub.id}"`:""}>${esc(g.name)}</span>
           <span class="meta">${!sub? "not listed"
-            : isC? `craft @ <span style="${sub.benchId?`color:${benchColor(sub.benchId)}`:""}">${esc(benchName(sub.benchId)||"?")}</span>`
+            : isC? `craft @ <span style="${recipesOf(sub)[0].benchId?`color:${benchColor(recipesOf(sub)[0].benchId)}`:""}">${esc(benchName(recipesOf(sub)[0].benchId)||"?")}</span>`
             : esc(sub.source||"material")}</span>
         </div>`;
       }).join("")}
-    </div>` : "";
+    </div>`).join("") : "";
 
   const deep = (craft && e.steps.length>1) ? `
     <div class="sec-title">Raw materials, all the way down</div>
@@ -1719,7 +1849,7 @@ function openItem(id){
       ${e.steps.filter(s=>s.item.id!==it.id).map(s=>`<div class="tnode">
         <span class="q">${s.crafts}×</span>
         <span class="nm craftable" data-id="${s.item.id}">${esc(s.item.name)}</span>
-        <span class="meta" style="${s.item.benchId?`color:${benchColor(s.item.benchId)}`:""}">${esc(benchName(s.item.benchId)||"bench not set")}</span>
+        <span class="meta" style="${s.rec.benchId?`color:${benchColor(s.rec.benchId)}`:""}">${esc(benchName(s.rec.benchId)||"bench not set")}</span>
       </div>`).join("")}
     </div>` : "";
 
@@ -1728,10 +1858,12 @@ function openItem(id){
       <div style="flex:1">
         <h2>${esc(it.name)}</h2>
         <div class="sub">
-          ${craft? (it.benchId? `<span style="color:${benchColor(it.benchId)};font-weight:650">${esc(benchName(it.benchId))}</span>` : "no bench set") : "raw material"}
+          ${craft? (altCount(it)? `${altCount(it)+1} ways to make it` :
+              (recipesOf(it)[0].benchId? `<span style="color:${benchColor(recipesOf(it)[0].benchId)};font-weight:650">${esc(benchName(recipesOf(it)[0].benchId))}</span>` : "no bench set"))
+            : "raw material"}
           ${it.category? " · "+esc(it.category):""}
-          ${num(it.craftTime)!=null? " · "+dur(it.craftTime):""}
-          ${it.levelReq? " · level "+esc(it.levelReq):""}
+          ${!altCount(it) && num(recipesOf(it)[0].craftTime)!=null? " · "+dur(recipesOf(it)[0].craftTime):""}
+          ${!altCount(it) && recipesOf(it)[0].levelReq? " · level "+esc(recipesOf(it)[0].levelReq):""}
           ${num(it.xp)!=null? " · "+it.xp+" xp":""}
         </div>
       </div>
@@ -1742,10 +1874,10 @@ function openItem(id){
       ${gaps.length? `<div class="card" style="border-color:rgba(251,191,36,.3);margin-bottom:18px;padding:11px 13px">
         <div class="tiny" style="color:var(--warn);font-weight:700">Missing: ${gaps.map(esc).join(" · ")}</div></div>`:""}
       ${direct}
-      ${craft && bpsOf(it).length? `
+      ${craft && recs.some(r=>r.blueprints.length)? `
       <div class="sec-title">Blueprints required</div>
       <div class="tree" style="margin-bottom:18px">
-        ${bpsOf(it).map(bp=>{
+        ${[...new Map(recs.flatMap(r=>r.blueprints).map(b=>[norm(b.name),b])).values()].map(bp=>{
           const sub = S.byName.get(norm(bp.name));
           const have = ownsBp(bp.name);
           return `<div class="tnode ${sub?"":"unknown"}">
@@ -1794,7 +1926,19 @@ function openEdit(id){
 
       <div class="sec-title" style="margin-top:18px">Ingredients</div>
       <div id="ingList">${(d.ingredients.length? d.ingredients : [{name:"",qty:1}]).map(ingRow).join("")}</div>
-      <button class="btn sm ghost" id="addIng">+ Add ingredient</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm ghost" id="addIng" type="button">+ Add ingredient</button>
+        <button class="btn sm ghost" id="pasteIng" type="button">Paste a list</button>
+      </div>
+      <div id="pasteBox" class="pastebox" hidden>
+        <textarea id="pasteText" placeholder="Paste the bench list, however it comes:&#10;20x Iron, 25x Metal Scrap, 1x Oak Plank&#10;or one per line, or Iron x20 — it works all of them out."></textarea>
+        <div class="pasterow">
+          <span class="tiny muted" id="pastePreview"></span>
+          <span class="spacer"></span>
+          <button class="btn sm ghost" id="pasteCancel" type="button">Cancel</button>
+          <button class="btn sm primary" id="pasteAdd" type="button">Add rows</button>
+        </div>
+      </div>
       <div class="tiny muted" style="margin-top:7px">Anything you name that isn't already listed gets added as a raw material automatically.</div>
 
       <details class="fold" ${(d.blueprints||[]).length?"open":""} style="margin-top:18px">
@@ -1836,7 +1980,13 @@ function openEdit(id){
         </div>
       </details>
 
-      <div style="margin:16px 0 12px"><label class="f">Where it comes from</label>
+      <div class="sec-title" style="margin-top:22px">Other ways to make it</div>
+      <div id="altList">${(d.alts||[]).map((a,i)=>altBlock(a,i)).join("")}</div>
+      <button class="btn sm ghost" id="addAlt" type="button">+ Add another recipe</button>
+      <div class="tiny muted" style="margin-top:7px">For items you can make more than one way. The recipe
+      above is the one the Planner starts with; you can switch between them in the plan itself.</div>
+
+      <div style="margin:22px 0 12px"><label class="f">Where it comes from</label>
         <input id="e_src" value="${esc(d.source)}" placeholder="Hardware store, mining, scrapping, NPC…"></div>
       <div><label class="f">Notes</label><textarea id="e_notes" placeholder="Anything worth remembering">${esc(d.notes)}</textarea></div>
     </div>
@@ -1849,6 +1999,44 @@ function openEdit(id){
   refreshDatalist();
   $("#addIng").onclick = ()=>{ $("#ingList").insertAdjacentHTML("beforeend", ingRow({name:"",qty:1})); };
   $("#addBp").onclick = ()=>{ $("#bpList").insertAdjacentHTML("beforeend", bpRow({name:"",qty:1,consumed:false})); };
+
+  // extra recipes
+  const wireAlt = box => {
+    box.querySelector(".alt-rm").onclick = ()=>box.remove();
+    box.querySelector(".alt-add").onclick = ()=>
+      box.querySelector(".alt-ings").insertAdjacentHTML("beforeend", ingRow({name:"",qty:1}));
+    box.querySelector(".alt-paste").onclick = ()=>{
+      const txt = prompt("Paste this recipe's ingredients:");
+      if(txt==null) return;
+      const rows = parseIngredients(txt);
+      if(!rows.length) return toast("Couldn't find anything to add",1);
+      box.querySelectorAll(".alt-ings .ingrow").forEach(r=>{ if(!r.querySelector(".ing-n").value.trim()) r.remove(); });
+      box.querySelector(".alt-ings").insertAdjacentHTML("beforeend", rows.map(ingRow).join(""));
+      toast(`${rows.length} ingredient${rows.length>1?"s":""} added`);
+    };
+  };
+  $$("#altList .altblock").forEach(wireAlt);
+  $("#addAlt").onclick = ()=>{
+    $("#altList").insertAdjacentHTML("beforeend", altBlock({}, 0));
+    wireAlt($("#altList .altblock:last-child"));
+  };
+
+  const pb = $("#pasteBox"), pt = $("#pasteText");
+  $("#pasteIng").onclick = ()=>{ pb.hidden = !pb.hidden; if(!pb.hidden) pt.focus(); };
+  $("#pasteCancel").onclick = ()=>{ pb.hidden = true; pt.value = ""; $("#pastePreview").textContent = ""; };
+  pt.oninput = ()=>{
+    const n = parseIngredients(pt.value).length;
+    $("#pastePreview").textContent = n ? `${n} ingredient${n>1?"s":""} found` : "";
+  };
+  $("#pasteAdd").onclick = ()=>{
+    const rows = parseIngredients(pt.value);
+    if(!rows.length) return toast("Couldn't find anything to add",1);
+    // drop any blank row already sitting there before appending
+    $$("#ingList .ingrow").forEach(r=>{ if(!r.querySelector(".ing-n").value.trim()) r.remove(); });
+    $("#ingList").insertAdjacentHTML("beforeend", rows.map(ingRow).join(""));
+    pb.hidden = true; pt.value = ""; $("#pastePreview").textContent = "";
+    toast(`${rows.length} ingredient${rows.length>1?"s":""} added`);
+  };
   $("#e_time").oninput = paintTimePreview;
   $("#e_timeu").onchange = ()=>{
     try{ localStorage.setItem(TIMEU_KEY, $("#e_timeu").value) }catch(e){}
@@ -1867,6 +2055,40 @@ function bpRow(g){
     </select>
     <input class="bp-q" type="number" min="1" step="1" value="${g.qty??1}" title="How many per craft" ${c?"":"disabled"}>
     <button type="button" onclick="this.parentElement.remove()">✕</button>
+  </div>`;
+}
+
+let altSeq = 0;
+function altBlock(a, i){
+  a = a || {};
+  const n = "a" + (altSeq++);
+  const tf = timeField(a.craftTime);
+  return `<div class="altblock" data-alt="${n}">
+    <div class="althead">
+      <input class="alt-label" value="${esc(a.label||"")}" placeholder="Name it (optional) — e.g. Substitute route">
+      <button type="button" class="alt-rm" title="Remove this recipe">✕</button>
+    </div>
+    <div class="grid3" style="margin-bottom:10px">
+      <div><label class="f">Bench</label><select class="alt-bench">
+        <option value="">— none —</option>
+        ${S.benches.map(b=>`<option value="${b.id}" ${a.benchId===b.id?"selected":""}>${esc(b.name)}</option>`).join("")}
+      </select></div>
+      <div><label class="f">Makes (qty)</label><input class="alt-out" type="number" min="1" value="${a.outputQty||1}"></div>
+      <div><label class="f">Craft time</label>
+        <div class="unitrow">
+          <input class="alt-time" type="number" min="0" step="any" value="${tf.value}">
+          <select class="alt-timeu">
+            <option value="s" ${tf.unit==="s"?"selected":""}>sec</option>
+            <option value="m" ${tf.unit==="m"?"selected":""}>min</option>
+          </select>
+        </div></div>
+    </div>
+    <label class="f">Ingredients</label>
+    <div class="alt-ings">${((a.ingredients||[]).length? a.ingredients : [{name:"",qty:1}]).map(ingRow).join("")}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm ghost alt-add" type="button">+ Add ingredient</button>
+      <button class="btn sm ghost alt-paste" type="button">Paste a list</button>
+    </div>
   </div>`;
 }
 
@@ -1908,12 +2130,69 @@ function paintTimePreview(){
   el.textContent = sec==null ? "" : (sec<=0 ? "" : "= "+dur(sec)+" per craft");
 }
 
+/* ---------------------------------------------------------------------
+   Pasting a list of ingredients. Copes with the shapes people actually
+   paste — "20x Iron", "Iron x20", "20 Iron", "Iron: 20" — separated by
+   newlines, commas or the · this app itself prints.
+   --------------------------------------------------------------------- */
+const PASTE_NOISE = /^(ingredients?|requirements?|materials?|blueprints?|resulting items?|craft|recipe)\s*:?$/i;
+
+function parseIngredients(text){
+  const out = [];
+  const chunks = String(text||"")
+    .replace(/\+\s*\d+\s*more/gi, "")      // the card's own "+1 more"
+    .split(/[\n\r;,·•]+/);
+
+  for(let raw of chunks){
+    let c = raw.trim()
+      .replace(/^[-*–—\u2022\s]+/, "")        // bullets
+      .replace(/[.\s]+$/, "")
+      .trim();
+    if(!c || PASTE_NOISE.test(c) || /^\d+$/.test(c)) continue;
+
+    let m, name, qty = 1;
+    if((m = c.match(/^(\d+(?:[.,]\d+)?)\s*[x×*]\s*(.+)$/i)))      { qty = m[1]; name = m[2]; }
+    else if((m = c.match(/^(.+?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)$/i))) { name = m[1]; qty = m[2]; }
+    else if((m = c.match(/^(.+?)\s*[:=]\s*(\d+(?:[.,]\d+)?)$/)))   { name = m[1]; qty = m[2]; }
+    else if((m = c.match(/^(\d+(?:[.,]\d+)?)\s+(.+)$/)))           { qty = m[1]; name = m[2]; }
+    else name = c;
+
+    name = String(name).replace(/^[x×*\s]+/i,"").replace(/[\s:=]+$/,"").trim();
+    if(!name) continue;
+    const n = parseFloat(String(qty).replace(",", "."));
+    out.push({ name, qty: isFinite(n) && n > 0 ? n : 1 });
+  }
+  return out;
+}
+
 function ingRow(g){
   return `<div class="ingrow">
     <input class="ing-n" list="dlItems" value="${esc(g.name||"")}" placeholder="Ingredient name">
     <input class="ing-q" type="number" min="0" step="any" value="${g.qty??1}" placeholder="Qty">
     <button type="button" onclick="this.parentElement.remove()">✕</button>
   </div>`;
+}
+
+/* Catch a recipe that eats itself at the moment it's typed, rather than
+   letting it surface later as nonsense numbers in the planner. */
+function cycleFor(it){
+  const start = norm(it.name);
+  const refs = x => recipesOf(x).flatMap(r=>[...r.ingredients, ...r.blueprints]).map(g=>g.name).filter(Boolean);
+  const seen = new Set();
+  const walk = (names, chain) => {
+    for(const nm of names){
+      const k = norm(nm);
+      if(k === start) return [...chain, it.name];
+      if(seen.has(k)) continue;
+      seen.add(k);
+      const sub = S.byName.get(k);
+      if(!sub || sub.id === it.id) continue;
+      const found = walk(refs(sub), [...chain, sub.name]);
+      if(found) return found;
+    }
+    return null;
+  };
+  return walk(refs(it), [it.name]);
 }
 
 async function saveItemForm(existing){
@@ -1935,6 +2214,11 @@ async function saveItemForm(existing){
   const dupe = S.items.find(x=>norm(x.name)===norm(name) && x.id!==(existing&&existing.id));
   if(dupe) return toast("Something's already called that",1);
 
+  // straight self-reference is never right, so don't let it be saved
+  const altIngs = $$("#altList .altblock .alt-ings .ing-n").map(i=>({name:i.value.trim()})).filter(g=>g.name);
+  const selfRef = [...ings, ...bps, ...altIngs].find(g=>norm(g.name)===norm(name));
+  if(selfRef) return toast(`"${name}" can't be its own ingredient or blueprint`,1);
+
   const it = {
     id: existing? existing.id : uid("it"),
     name, category:$("#e_cat").value.trim(), benchId:$("#e_bench").value,
@@ -1943,8 +2227,28 @@ async function saveItemForm(existing){
     buyCost: num($("#e_buy").value), sellPrice: num($("#e_sell").value),
     source: $("#e_src").value.trim(), notes: $("#e_notes").value.trim(),
     ingredients: ings, blueprints: bps,
-    blueprint: !!(existing && existing.blueprint)
+    blueprint: !!(existing && existing.blueprint),
+    alts: $$("#altList .altblock").map(box=>{
+      const rows = [...box.querySelectorAll(".alt-ings .ingrow")].map(r=>({
+        name: r.querySelector(".ing-n").value.trim(),
+        qty:  num(r.querySelector(".ing-q").value) || 0
+      })).filter(g=>g.name);
+      const tv = num(box.querySelector(".alt-time").value);
+      return {
+        label: box.querySelector(".alt-label").value.trim(),
+        benchId: box.querySelector(".alt-bench").value,
+        outputQty: Math.max(1, parseInt(box.querySelector(".alt-out").value)||1),
+        craftTime: tv==null? null : (box.querySelector(".alt-timeu").value==="m" ? tv*60 : tv),
+        ingredients: rows, blueprints: []
+      };
+    }).filter(a=>a.ingredients.length)
   };
+
+  // an indirect loop might be a half-finished edit, so warn rather than block
+  const chain = cycleFor(it);
+  if(chain && !confirm(
+      `This makes a loop:\n\n${chain.join(" → ")}\n\n` +
+      `The planner can't work out real totals for a chain that comes back to itself. Save anyway?`)) return;
 
   try{
     const saved = await Store.saveItem(it);
@@ -1958,7 +2262,7 @@ async function saveItemForm(existing){
       craftTime:null, levelReq:"", xp:null, buyCost:null, sellPrice:null,
       source:"", notes:"", ingredients:[], blueprints:[], blueprint: !!isBp
     });
-    for(const g of ings){
+    for(const g of [...ings, ...(it.alts||[]).flatMap(a=>a.ingredients)]){
       if(S.byName.get(norm(g.name))) continue;
       upsertLocal(await Store.saveItem(stub(g.name, false))); created++;
     }
@@ -1983,7 +2287,7 @@ function upsertLocal(it){
 function openBenchView(id){
   const b = benchOf(id); if(!b) return;
   const c = benchColor(b.id);
-  const mine = S.items.filter(i=>i.benchId===b.id).sort((x,y)=>x.name.localeCompare(y.name));
+  const mine = S.items.filter(i=>allBenches(i).includes(b.id)).sort((x,y)=>x.name.localeCompare(y.name));
   openModal(`
     <div class="mhead">
       <div style="flex:1">
@@ -2066,11 +2370,21 @@ function openBench(id){
     const n = S.items.filter(i=>i.benchId===b.id).length;
     if(!confirm(`Delete "${b.name}"?${n?` ${n} recipe(s) will lose their bench.`:""}`)) return;
     try{
+      const orphaned = S.items.filter(i=>i.benchId===b.id).map(i=>i.id);
       await Store.delBench(b.id);
-      for(const e of (b.images||[])){ const id = imgId(e); if(id) await dropImage(id); }
       S.benches = S.benches.filter(x=>x.id!==b.id);
       for(const it of S.items) if(it.benchId===b.id){ it.benchId=""; await Store.saveItem(it); }
-      closeModal(); render(); toast("Bench deleted");
+      closeModal(); render();
+      offerUndo(`Deleted "${b.name}"`,
+        async ()=>{
+          S.benches.push(await Store.saveBench(b));
+          for(const id of orphaned){                       // put its recipes back on it
+            const it = S.items.find(x=>x.id===id);
+            if(it){ it.benchId = b.id; await Store.saveItem(it); }
+          }
+          reindex();
+        },
+        async ()=>{ for(const e of (b.images||[])){ const id = imgId(e); if(id) await dropImage(id); } });
     }catch(err){ toast("Delete failed",1) }
   };
 }
@@ -2325,6 +2639,10 @@ function wireView(){
   $$("[data-trm]").forEach(b=> b.onclick = ()=>{ S.targets.splice(+b.dataset.trm,1); render(); });
   const pc = $("#planClear"); if(pc) pc.onclick = ()=>{ S.targets=[]; render(); };
   const us = $("#useStock"); if(us) us.onchange = ()=>{ S.useStock = us.checked; render(); };
+  $$("[data-pickfor]").forEach(sel=> sel.onchange = ()=>{
+    S.pick[norm(sel.dataset.pickfor)] = sel.value;
+    savePick(); render();
+  });
   $$("[data-ownbp]").forEach(c=> c.onchange = ()=>{
     const k = norm(c.dataset.ownbp);
     if(c.checked) S.stock[k] = Math.max(1, S.stock[k]||0); else delete S.stock[k];
@@ -2346,7 +2664,10 @@ document.addEventListener("click", e=>{
     const it = S.items.find(x=>x.id===del.dataset.del); if(!it) return;
     if(!confirm(`Delete "${it.name}"?`)) return;
     Store.delItem(it.id).then(()=>{
-      S.items = S.items.filter(x=>x.id!==it.id); reindex(); closeModal(); render(); toast("Deleted");
+      S.items = S.items.filter(x=>x.id!==it.id); reindex(); closeModal(); render();
+      offerUndo(`Deleted "${it.name}"`, async ()=>{
+        upsertLocal(await Store.saveItem(it));
+      });
     }).catch(()=>toast("Delete failed",1));
     return;
   }
@@ -2369,9 +2690,11 @@ document.addEventListener("click", e=>{
   if(ds){
     const sp = S.spots.find(x=>x.id===ds.dataset.delspot); if(!sp) return;
     if(!confirm(`Delete "${sp.name}"?`)) return;
-    Store.delSpot(sp.id).then(async ()=>{
-      for(const e of (sp.images||[])){ const id = imgId(e); if(id) await dropImage(id); }
-      S.spots = S.spots.filter(x=>x.id!==sp.id); closeModal(); render(); toast("Deleted");
+    Store.delSpot(sp.id).then(()=>{
+      S.spots = S.spots.filter(x=>x.id!==sp.id); closeModal(); render();
+      offerUndo(`Deleted "${sp.name}"`,
+        async ()=>{ const back = await Store.saveSpot(sp); S.spots.push(back); },
+        async ()=>{ for(const e of (sp.images||[])){ const id = imgId(e); if(id) await dropImage(id); } });
     }).catch(()=>toast("Delete failed",1));
     return;
   }
@@ -2399,6 +2722,13 @@ document.addEventListener("click", e=>{
 $("#fab").onclick = ()=> KIND[S.tab] ? openSpotEdit(null, S.tab) : openEdit(null);
 $("#btnData").onclick = openData;
 $("#btnHelp").onclick = openGuide;
+
+function paintNewsDot(){
+  const b = $("#btnHelp"); if(!b) return;
+  const n = unseenNews().length;
+  b.classList.toggle("hasnews", n > 0);
+  b.title = n ? "What's new" : "How to use this";
+}
 $("#btnLock").onclick = openUnlock;
 
 function paintLock(){
@@ -2416,7 +2746,31 @@ function paintLock(){
    ===================================================================== */
 const SEEN_GUIDE = PFX+"seenGuide";
 
+/* Bump GUIDE_VERSION and add an entry whenever something ships that a user
+   would need to know. Anyone who's read an older version gets a dot on the
+   How-to-use button and a "New since you last looked" block at the top —
+   updating the guide is useless if nobody reopens it. */
+const GUIDE_VERSION = 3;
+const WHATS_NEW = [
+  { v:3, when:"Latest", items:[
+    "<b>More than one way to make something</b> — an item can now hold several recipes. The Planner shows a picker so you can switch route and watch the shopping list change."
+  ]},
+  { v:2, items:[
+    "<b>Paste a list</b> — adding a recipe no longer means typing ingredients one row at a time. Paste the bench's list in whatever shape it comes and it fills the rows for you.",
+    "<b>Undo</b> — deleting anything now leaves an Undo button for seven seconds. Screenshots survive that window too, so an undone delete comes back whole.",
+    "<b>Loop protection</b> — an item can't be its own ingredient any more, and a longer loop gets named so it can be fixed.",
+    "<b>Craft time in minutes</b> — the time box takes minutes or seconds, and shows you what your number means.",
+    "<b>Prep in planner</b> — a heist can push all its gear into the Planner in one click."
+  ]}
+];
+function guideSeen(){ try{ return parseInt(localStorage.getItem(SEEN_GUIDE)) || 0 }catch(e){ return 0 } }
+function markGuideSeen(){ try{ localStorage.setItem(SEEN_GUIDE, String(GUIDE_VERSION)) }catch(e){} }
+function unseenNews(){ const v = guideSeen(); return v ? WHATS_NEW.filter(n=>n.v > v) : []; }
+
 function openGuide(){
+  const news = unseenNews();
+  markGuideSeen();
+  paintNewsDot();
   const tabs = [
     ["Catalogue", "Every item and material. Search by name — or by ingredient, so typing <b>copper</b> shows everything that eats copper."],
     ["Planner",   "The one that saves you time. Pick what you want to make, get one shopping list."],
@@ -2433,6 +2787,11 @@ function openGuide(){
       <button class="x" data-close>×</button>
     </div>
     <div class="mbody guide">
+
+      ${news.length? `<div class="whatsnew">
+        <div class="sec-title" style="margin:0 0 8px;color:var(--acc)">New since you last looked</div>
+        <ul>${news.flatMap(n=>n.items).map(i=>`<li>${i}</li>`).join("")}</ul>
+      </div>`:""}
 
       <p class="lead">Everything the crew knows about crafting and running the city, in one place.
       <b>Anyone can read it</b> — searching, browsing and the Planner all work without a code.</p>
@@ -2454,8 +2813,18 @@ function openGuide(){
           you've already been to.</li>
         <li><b>Blueprints you're missing</b>, if the recipe needs one — before you get there, not after.</li>
       </ol>
+      <p>A heist can fill the Planner for you: open one and hit <b>Prep in planner</b> — every piece
+      of gear that's in the catalogue goes in at once.</p>
       <p class="tiny muted">Your on-hand counts are yours alone. They're saved on your own device and
       nobody else sees or changes them.</p>
+
+      <div class="sec-title" style="margin-top:22px">When there's more than one way to make it</div>
+      <p>Some things can be made more than one way — different ingredients, sometimes a different
+      bench. Those show <b>2 ways</b> on the card, and opening the item lists every recipe with its
+      own bench, time and ingredients.</p>
+      <p>In the Planner you get a <b>picker</b> at the top: choose a route and the shopping list, the
+      bench stops and the total time all update. Your choice is remembered on this device, so you
+      don't reset it every time.</p>
 
       <div class="sec-title" style="margin-top:22px">Reading a card</div>
       <table class="legend">
@@ -2488,12 +2857,23 @@ function openGuide(){
         <p>You're unlocked, so you'll see a <b>+</b> button bottom-right — it adds whatever the tab
         you're on is for. On the Catalogue: name the item, list its ingredients, pick the bench.
         That's the minimum; craft time, level and the rest can wait.</p>
+        <p>Everyone else opens this <b>read-only</b> until they're given the <b>edit code</b>. Pass it
+        to whoever should be maintaining it with you; they enter it once under
+        <b>View only · unlock</b> and that browser remembers it.</p>
         <ul class="glist2">
+          <li><b>Paste a list</b> instead of typing rows. Copy the bench's ingredients —
+              <i>20x Iron, 25x Metal Scrap, 1x Oak Plank</i> — hit <b>Paste a list</b>, and it works
+              out the names and quantities. One per line, <i>Iron x20</i> and <i>Copper: 2</i> all work too.</li>
           <li>Name an ingredient that doesn't exist yet and it gets created for you, so the catalogue
               fills itself in as you type.</li>
           <li>Craft time takes <b>seconds or minutes</b> — there's a unit dropdown, and it shows you
               what your number means underneath.</li>
           <li>Screenshots: click, drag, or just <b>paste</b> straight from a fresh grab.</li>
+          <li>Deleted the wrong thing? There's an <b>Undo</b> button in the message for seven seconds.</li>
+          <li>Can something be made two ways? Add the second under <b>Other ways to make it</b> at the
+              bottom of the form — its own bench, time and ingredients.</li>
+          <li>An item can't be its own ingredient — if you try, it says so rather than letting the
+              Planner produce nonsense later.</li>
         </ul>`
       : `
         <p>You're in <b>view only</b>, which is the normal state — that's why there's no + button.
@@ -2591,13 +2971,10 @@ async function boot(){
   }
   render();
 
-  // first visit on this browser: show them round without being asked
-  try{
-    if(!localStorage.getItem(SEEN_GUIDE)){
-      localStorage.setItem(SEEN_GUIDE, "1");
-      openGuide();
-    }
-  }catch(e){}
+  // First visit on this browser: show them round without being asked. Someone
+  // who's read an older version gets a dot instead of a modal in their face.
+  if(!guideSeen()) openGuide();
+  else paintNewsDot();
 
   Store.subscribe(async ()=>{
     try{
