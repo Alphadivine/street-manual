@@ -238,6 +238,21 @@ code can open dev tools all they like and still can't write.
 - With no Firebase configured at all, everything is editable — locking your own local file would be
   pointless.
 
+### Turning editing off
+
+Click **Editing on** in the header and you get two ways to stop editing, neither of which gives up
+your access:
+
+- **Preview as viewer** — the app behaves exactly as it does for the crew: no **+** button, no Edit
+  or Delete. One click on the header pill puts you back. Good for checking a change reads properly.
+- **Turn editing off** — sticks across reloads until you switch it back on. Stops accidental edits
+  if you leave the page open or hand the machine over. No code needed to return; this is the browser
+  choosing not to edit, not losing access.
+
+To genuinely take a device's access away, delete its row from `boards/main/editors` in the Firebase
+console. Clearing that browser's site data does it too.
+
+
 ---
 
 ## 🖼️ How screenshots are stored

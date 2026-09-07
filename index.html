@@ -604,13 +604,22 @@ async function signIn(){
   myUid = cred.user.uid;
   return myUid;
 }
+/* S.editor is what the server says you're allowed to do. S.canEdit is what the
+   app actually offers, which you can turn down without giving up the former:
+   a persistent lock on this browser, or a temporary look at what the crew sees. */
+const LOCK_KEY = PFX+"locked";
+const isLocked = () => { try{ return localStorage.getItem(LOCK_KEY)==="1" }catch(e){ return false } };
+function setLocked(v){ try{ v? localStorage.setItem(LOCK_KEY,"1") : localStorage.removeItem(LOCK_KEY) }catch(e){} }
+function applyEdit(){ S.canEdit = !!S.editor && !isLocked() && !S.preview; }
+
 async function checkEditor(){
-  if(!CLOUD){ S.canEdit = true; return true; }
-  if(!myUid){ S.canEdit = false; return false; }
+  if(!CLOUD){ S.editor = true; applyEdit(); return S.canEdit; }
+  if(!myUid){ S.editor = false; applyEdit(); return false; }
   try{
     const d = await FB.getDoc(FB.doc(db, "boards", BOARD, "editors", myUid));
-    S.canEdit = d.exists();
-  }catch(e){ S.canEdit = false; }
+    S.editor = d.exists();
+  }catch(e){ S.editor = false; }
+  applyEdit();
   return S.canEdit;
 }
 async function claimEditor(code){
@@ -619,7 +628,7 @@ async function claimEditor(code){
   // The rules only let this write through when the code matches, so a wrong
   // code comes back as a permission error rather than a silent success.
   await FB.setDoc(FB.doc(db, "boards", BOARD, "editors", myUid), { code, at: Date.now() });
-  S.canEdit = true;
+  S.editor = true; setLocked(false); applyEdit();
   return true;
 }
 
@@ -778,7 +787,7 @@ async function imgFull(e){
 const S = {
   items:[], benches:[], spots:[],
   spotQ:"", spotTag:"",
-  canEdit:true,
+  canEdit:true, editor:true, preview:false,
   byName:new Map(),
   stock:{},           // on-hand counts — always local to this device
   tab:"catalogue",
@@ -2466,9 +2475,11 @@ function openData(){
       <div class="tiny muted" style="margin-bottom:12px">
         ${S.canEdit
           ? "This device can edit. Everyone else opens the manual read-only until they enter the edit code."
+          : S.editor
+          ? "You have access, but editing is switched off on this browser."
           : "You're read-only. Everything here is browsable and the planner works — adding and changing needs the edit code."}
       </div>
-      <button class="btn sm" id="lockBtn">${S.canEdit? "Access details":"Unlock editing"}</button>` : `
+      <button class="btn sm" id="lockBtn">${S.canEdit? "Editing options" : S.editor? "Turn editing back on" : "Unlock editing"}</button>` : `
       <div class="sec-title">Turn on shared crew mode</div>
       <div class="tiny muted" style="margin-bottom:10px">
         Create a free project at <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a>,
@@ -2683,6 +2694,21 @@ document.addEventListener("click", e=>{
   }
   const tab = e.target.closest("[data-tab]"); if(tab){ S.tab = tab.dataset.tab; S.spotQ=""; S.spotTag=""; render(); return; }
 
+  if(e.target.closest("#previewBtn")){
+    S.preview = true; applyEdit(); closeModal(); paintLock(); render();
+    toast("Previewing what the crew sees — click the header pill to come back");
+    return;
+  }
+  if(e.target.closest("#lockBtnOff")){
+    setLocked(true); S.preview = false; applyEdit(); closeModal(); paintLock(); render();
+    toast("Editing off on this browser");
+    return;
+  }
+  if(e.target.closest("#lockBtnOn")){
+    setLocked(false); applyEdit(); closeModal(); paintLock(); render();
+    toast("Editing back on");
+    return;
+  }
   const vb = e.target.closest("[data-viewbench]"); if(vb){ openBenchView(vb.dataset.viewbench); return; }
   const ns = e.target.closest("[data-newspot]");  if(ns){ openSpotEdit(null, ns.dataset.newspot); return; }
   const es = e.target.closest("[data-editspot]"); if(es){ openSpotEdit(es.dataset.editspot); return; }
@@ -2734,8 +2760,11 @@ $("#btnLock").onclick = openUnlock;
 function paintLock(){
   const b = $("#btnLock");
   b.hidden = !CLOUD;
-  b.textContent = S.canEdit ? "Editing on" : "View only · unlock";
-  b.style.color = S.canEdit ? "var(--acc)" : "var(--warn)";
+  b.textContent = S.preview ? "Previewing as viewer · exit"
+                : S.canEdit ? "Editing on"
+                : S.editor  ? "Editing off · turn on"
+                : "View only · unlock";
+  b.style.color = S.preview ? "var(--acc2)" : S.canEdit ? "var(--acc)" : "var(--warn)";
   $("#fab").hidden = !S.canEdit;
 }
 
@@ -2750,9 +2779,12 @@ const SEEN_GUIDE = PFX+"seenGuide";
    would need to know. Anyone who's read an older version gets a dot on the
    How-to-use button and a "New since you last looked" block at the top —
    updating the guide is useless if nobody reopens it. */
-const GUIDE_VERSION = 3;
+const GUIDE_VERSION = 4;
 const WHATS_NEW = [
-  { v:3, when:"Latest", items:[
+  { v:4, when:"Latest", items:[
+    "<b>Turn editing off</b> — if you can edit, the header pill now lets you switch editing off on this browser, or preview what the crew sees. Neither gives up your access."
+  ]},
+  { v:3, items:[
     "<b>More than one way to make something</b> — an item can now hold several recipes. The Planner shows a picker so you can switch route and watch the shopping list change."
   ]},
   { v:2, items:[
@@ -2860,6 +2892,11 @@ function openGuide(){
         <p>Everyone else opens this <b>read-only</b> until they're given the <b>edit code</b>. Pass it
         to whoever should be maintaining it with you; they enter it once under
         <b>View only · unlock</b> and that browser remembers it.</p>
+        <p>Click <b>Editing on</b> in the header to <b>turn editing off</b> on this browser — handy if
+        you leave the page open or hand the machine over, and it stays off until you switch it back
+        on. No code needed to return; you keep your access either way. The same panel has
+        <b>Preview as viewer</b>, which shows you exactly what the crew sees for as long as you want
+        to look.</p>
         <ul class="glist2">
           <li><b>Paste a list</b> instead of typing rows. Copy the bench's ingredients —
               <i>20x Iron, 25x Metal Scrap, 1x Oak Plank</i> — hit <b>Paste a list</b>, and it works
@@ -2893,14 +2930,38 @@ function openGuide(){
 }
 
 function openUnlock(){
-  if(S.canEdit) return openModal(`
-    <div class="mhead"><div style="flex:1"><h2>Editing is on</h2>
-      <div class="sub">This device can add and change things.</div></div>
+  // stepping out of a preview needs no dialog
+  if(S.preview){ S.preview = false; applyEdit(); paintLock(); render(); return toast("Editing back on"); }
+
+  if(S.editor) return openModal(`
+    <div class="mhead"><div style="flex:1"><h2>${S.canEdit? "Editing is on":"Editing is off"}</h2>
+      <div class="sub">${S.canEdit
+        ? "This device can add and change things."
+        : "You still have access — editing is just switched off on this browser."}</div></div>
       <button class="x" data-close>×</button></div>
-    <div class="mbody"><div class="tiny muted">Unlocked for this browser. Clearing your site data signs you
-      out and you'd enter the code again. To take a device's access away, delete its row from
-      <b>boards → ${esc(BOARD)} → editors</b> in the Firebase console.</div></div>
-    <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`);
+    <div class="mbody">
+      ${S.canEdit? `
+        <div class="sec-title">Turn editing off</div>
+        <dl class="glist">
+          <div><dt>Preview as viewer</dt><dd>See exactly what the crew sees. Nothing is given up —
+            one click puts you back. Good for checking a change reads properly.</dd></div>
+          <div><dt>Turn editing off</dt><dd>Sticks until you turn it back on, including after a reload.
+            Stops accidental edits if you leave this open or hand the machine over. You won't need the
+            code again — it's this browser choosing not to edit, not losing access.</dd></div>
+        </dl>
+        <div class="tiny muted" style="margin-top:12px">To actually take a device's access away, delete its
+        row from <b>boards → ${esc(BOARD)} → editors</b> in the Firebase console. Clearing site data does
+        it too.</div>`
+      : `<div class="tiny muted">Editing is switched off on this browser. Turn it back on below — no
+         code needed, since you still have access.</div>`}
+    </div>
+    <div class="mfoot">
+      ${S.canEdit? `<button class="btn" id="previewBtn">Preview as viewer</button>
+        <div class="spacer"></div>
+        <button class="btn danger" id="lockBtnOff">Turn editing off</button>`
+      : `<div class="spacer"></div><button class="btn primary" id="lockBtnOn">Turn editing back on</button>`}
+      <button class="btn ghost" data-close>Close</button>
+    </div>`);
 
   openModal(`
     <div class="mhead"><div style="flex:1"><h2>Unlock editing</h2>
@@ -2960,8 +3021,8 @@ async function boot(){
 
   if(CLOUD){
     try{ await signIn(); await checkEditor(); }
-    catch(err){ console.warn("sign-in failed", err.message); S.canEdit = false; }
-  }else S.canEdit = true;
+    catch(err){ console.warn("sign-in failed", err.message); S.editor = false; applyEdit(); }
+  }else{ S.editor = true; applyEdit(); }
 
   try{
     const d = await Store.loadAll();
