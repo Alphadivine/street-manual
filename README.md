@@ -55,6 +55,11 @@ That colour also runs down the **left edge of the item card**, so the catalogue 
 by bench before you read a word. No stripe means it isn't crafted — a raw material or a blueprint —
 or that it's made at more than one bench.
 
+**Hacks carry their own picture.** Each hack on a heist has a screenshot slot on its row in the
+editor — click it or drag an image onto it. In the heist view the picture sits beside the hack's
+name, so a circle hack and a keypad are told apart by looking. One per hack; they go into backups
+and are cleaned up when the hack or the heist is deleted.
+
 Benches take **photos** as well. Clicking one opens a detail view with the gallery, its notes and
 everything it makes — open to read-only crew too, so nobody has to describe where a bench is over
 voice.

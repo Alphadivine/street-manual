@@ -265,6 +265,32 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* ---------- ingredient rows ---------- */
 .ingrow{display:grid;grid-template-columns:1fr 92px 34px;gap:8px;margin-bottom:7px;align-items:center}
+.ingrow.hk{grid-template-columns:1fr 92px 46px 34px}
+/* The per-hack screenshot button doubles as its own thumbnail, so the row
+   shows you what you've attached without opening anything. Selectors are
+   scoped through .ingrow because the generic row-button rule below would
+   otherwise reset the background shorthand and flatten the picture. */
+.ingrow button.hkshot{
+  position:relative;height:36px;width:100%;border:1px dashed var(--line2);border-radius:5px;
+  background-color:rgba(0,0,0,.3);background-position:center;background-size:cover;
+  background-repeat:no-repeat;color:var(--dim2);
+  cursor:pointer;font-size:16px;line-height:1;padding:0;overflow:visible;
+}
+.ingrow button.hkshot:hover{border-color:var(--acc);color:var(--txt)}
+.ingrow button.hkshot.set{border-style:solid;border-color:var(--line2);color:transparent}
+.ingrow button.hkshot.set:hover{border-color:var(--acc);color:transparent}
+.ingrow button.hkshot .rm{
+  position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;
+  background:var(--bad);color:#170707;font-size:11px;font-weight:900;line-height:17px;
+  display:grid;place-items:center;
+}
+.ingrow button.hkshot.over{border-color:var(--acc);background-color:rgba(74,222,128,.1)}
+/* …and in the heist view the hack sits next to its picture. */
+.hackrow{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.hackrow:last-child{border-bottom:none}
+.hackrow img{width:112px;height:70px;object-fit:cover;border-radius:5px;border:1px solid var(--line);cursor:zoom-in;flex:none;display:block}
+.hackrow .txt{flex:1;min-width:0;padding-top:2px}
+.hackrow .noshot{width:112px;flex:none}   /* keeps the names in one column */
 .ingrow button{background:transparent;border:1px solid var(--line);border-radius:8px;color:var(--dim2);cursor:pointer;height:36px}
 .ingrow button:hover{color:var(--bad);border-color:rgba(248,113,113,.35)}
 .altblock{border:1px solid var(--line2);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:rgba(0,0,0,.16)}
@@ -1563,11 +1589,15 @@ function openHeist(h){
 
       ${hacksOf(h).length? `
         <div class="sec-title">Hacks to expect</div>
-        <div class="tree" style="margin-bottom:18px">
-          ${hacksOf(h).map(k=>`<div class="tnode">
-            <span class="q" style="color:#9085e9">${esc(String(k.qty||1))}×</span>
-            <span class="nm">${esc(k.name)}</span>
-          </div>`).join("")}
+        <div style="margin-bottom:18px">
+          ${(()=>{ const anyShot = hacksOf(h).some(k=>k.shot); return hacksOf(h).map((k,i)=>`<div class="hackrow">
+            ${k.shot? `<img src="${esc(imgThumb(k.shot))}" alt="" data-shot="hk${i}" data-spotid="${esc(h.id)}">`
+                    : (anyShot? `<span class="noshot"></span>` : "")}
+            <div class="txt">
+              <span class="q" style="color:#9085e9;font-weight:700">${esc(String(k.qty||1))}×</span>
+              <span class="nm" style="font-weight:600">${esc(k.name)}</span>
+            </div>
+          </div>`).join(""); })()}
         </div>` : ""}
 
       ${stepsOf(h).length? `
@@ -1585,6 +1615,7 @@ function openHeist(h){
                  : `<button class="btn ghost" data-close>Close</button>`}
     </div>`, "wide");
   hydrateGallery(h.images, h.id);
+  hydrateGallery(hacksOf(h).map(k=>k.shot), h.id, "hk");
 }
 
 /* ---------- spot edit ---------- */
@@ -1594,6 +1625,7 @@ function openSpotEdit(id, kind){
   const k = s? s.kind : kind;
   const K = KIND[k];
   const d = s || { name:"", area:"", blocks:"", vehicle:"", notes:"", tags:[], images:[] };
+  Object.keys(HACK_SHOTS).forEach(k=>delete HACK_SHOTS[k]);   // fresh form, fresh pending shots
 
   openModal(`
     <div class="mhead"><div style="flex:1">
@@ -1620,7 +1652,11 @@ function openSpotEdit(id, kind){
 
       <div class="sec-title" style="margin-top:22px">Hacks to expect</div>
       <div id="hackList">${(d.hacks||[]).map(hackRow).join("")}</div>
+      <input type="file" id="hackFile" accept="image/*" class="hidden">
       <button class="btn sm ghost" id="addHack" type="button">+ Add hack</button>
+      <div class="tiny muted" style="margin-top:7px">The square on each row takes a
+        <b>screenshot of that hack</b> — click it or drag a picture onto it. One per hack, so the
+        crew can see which mini-game they're walking into.</div>
 
       <div style="margin:22px 0 12px"><label class="f">Steps — one per line</label>
         <textarea id="h_steps" style="min-height:150px" placeholder="Park the van on the east side&#10;Thermite the vault door&#10;Two on the door, two carrying">${esc(stepsOf(d).join("\n"))}</textarea>
@@ -1648,6 +1684,7 @@ function openSpotEdit(id, kind){
     </div>`, "wide");
 
   const shotBox = mountShotEditor(d.images);
+  wireHackShots();
   if($("#addGear")) $("#addGear").onclick = ()=>$("#gearList").insertAdjacentHTML("beforeend", gearRow({name:"",qty:1}));
   if($("#addHack")) $("#addHack").onclick = ()=>$("#hackList").insertAdjacentHTML("beforeend", hackRow({name:"",qty:1}));
 
@@ -1668,15 +1705,19 @@ function openSpotEdit(id, kind){
       rec.gear  = $$("#gearList .ingrow").map(r=>({
                     name: r.querySelector(".gear-n").value.trim(),
                     qty: Math.max(1, parseInt(r.querySelector(".gear-q").value)||1) })).filter(g=>g.name);
-      rec.hacks = $$("#hackList .ingrow").map(r=>({
-                    name: r.querySelector(".hack-n").value.trim(),
-                    qty: Math.max(1, parseInt(r.querySelector(".hack-q").value)||1) })).filter(g=>g.name);
+      rec.hacks = $$("#hackList .ingrow").map(r=>{
+                    const shot = HACK_SHOTS[r.dataset.hk];
+                    return { name: r.querySelector(".hack-n").value.trim(),
+                             qty: Math.max(1, parseInt(r.querySelector(".hack-q").value)||1),
+                             shot: shot || null };
+                  }).filter(g=>g.name);
       rec.steps = $("#h_steps").value.split("\n").map(x=>x.trim()).filter(Boolean);
     }
     const btn = $("#saveSpot");
     btn.disabled = true; btn.textContent = "Saving…";
     try{
       rec.images = await shotBox.commit((s&&s.images)||[]);
+      if(k==="heist") await commitHackShots(rec, s);
       const saved = await Store.saveSpot(rec);
       const i = S.spots.findIndex(x=>x.id===saved.id);
       if(i>=0) S.spots[i]=saved; else S.spots.push(saved);
@@ -1773,6 +1814,20 @@ function mountShotEditor(initial){
   };
 }
 
+// The same deferred-upload deal the gallery gets, one picture at a time:
+// nothing is uploaded until you save, and a shot taken off a hack (or a hack
+// deleted outright) has its stored image removed with it.
+async function commitHackShots(rec, previous){
+  for(const k of rec.hacks){
+    if(k.shot && k.shot._full) k.shot = { id: await putImage(k.shot._full), thumb: k.shot.thumb };
+  }
+  const kept = new Set(rec.hacks.map(k=>imgId(k.shot)).filter(Boolean));
+  for(const old of ((previous && previous.hacks) || [])){
+    const id = imgId(old.shot);
+    if(id && !kept.has(id)) await dropImage(id);
+  }
+}
+
 // A gallery that shows thumbnails immediately and swaps the full-size images
 // in behind them once they've loaded.
 function galleryHTML(images, key){
@@ -1780,10 +1835,11 @@ function galleryHTML(images, key){
   return `<div class="shots">${images.map((e,i)=>
     `<img src="${esc(imgThumb(e))}" alt="" data-shot="${i}" data-spotid="${esc(key)}">`).join("")}</div>`;
 }
-function hydrateGallery(images, key){
+function hydrateGallery(images, key, prefix){
   (images||[]).forEach(async (e,i)=>{
+    if(!e) return;
     const full = await imgFull(e);
-    const el = $(`[data-shot="${i}"][data-spotid="${key}"]`);
+    const el = $(`[data-shot="${(prefix||"")+i}"][data-spotid="${key}"]`);
     if(el && full && el.src !== full) el.src = full;
   });
 }
@@ -2148,12 +2204,64 @@ function gearRow(g){
     <button type="button" onclick="this.parentElement.remove()">✕</button>
   </div>`;
 }
+/* Each hack keeps its own screenshot — a circle hack and a keypad are told
+   apart by looking, not by reading. HACK_SHOTS holds the pending picture for
+   each row: existing entries as they are, new ones with the full-size image
+   parked alongside until save. */
+const HACK_SHOTS = {};
+let hackKeyN = 0;
 function hackRow(g){
-  return `<div class="ingrow">
+  const key = "hk" + (++hackKeyN);
+  if(g && g.shot) HACK_SHOTS[key] = g.shot;
+  return `<div class="ingrow hk" data-hk="${key}">
     <input class="hack-n" value="${esc(g.name||"")}" placeholder="Circle hack, keypad, thermite mini-game…">
     <input class="hack-q" type="number" min="1" step="1" value="${g.qty??1}">
+    ${hackShotBtn(key)}
     <button type="button" onclick="this.parentElement.remove()">✕</button>
   </div>`;
+}
+function hackShotBtn(key){
+  const e = HACK_SHOTS[key], t = imgThumb(e);
+  return `<button type="button" class="hkshot${t?" set":""}" data-hk="${key}"
+    style="${t?`background-image:url('${esc(t)}')`:""}"
+    title="${t?"Replace this hack's screenshot":"Add a screenshot of this hack"}">+${
+    t?`<span class="rm" data-hkrm="${key}" title="Remove">×</span>`:""}</button>`;
+}
+function repaintHackShot(key){
+  const row = document.querySelector(`#hackList [data-hk="${key}"]`);
+  if(!row) return;
+  row.querySelector(".hkshot").outerHTML = hackShotBtn(key);
+}
+/* One hidden file input serves every row; the row waiting on it is remembered
+   here rather than cloning an input per hack. */
+let hackShotFor = null;
+function wireHackShots(){
+  const list = $("#hackList"); if(!list) return;
+  list.onclick = async e=>{
+    const rm = e.target.closest("[data-hkrm]");
+    if(rm){ e.preventDefault(); e.stopPropagation();
+            delete HACK_SHOTS[rm.dataset.hkrm]; repaintHackShot(rm.dataset.hkrm); return; }
+    const b = e.target.closest(".hkshot");
+    if(b){ e.preventDefault(); hackShotFor = b.dataset.hk; $("#hackFile").value=""; $("#hackFile").click(); }
+  };
+  list.ondragover = e=>{ const b=e.target.closest(".hkshot"); if(b){ e.preventDefault(); b.classList.add("over"); } };
+  list.ondragleave = e=>{ const b=e.target.closest(".hkshot"); if(b) b.classList.remove("over"); };
+  list.ondrop = async e=>{
+    const b = e.target.closest(".hkshot"); if(!b) return;
+    e.preventDefault(); b.classList.remove("over");
+    await takeHackShot(b.dataset.hk, [...e.dataTransfer.files][0]);
+  };
+  $("#hackFile").onchange = async e=>{
+    await takeHackShot(hackShotFor, e.target.files[0]); hackShotFor = null;
+  };
+}
+async function takeHackShot(key, f){
+  if(!key || !f || !f.type.startsWith("image/")) return;
+  try{
+    const {full, thumb} = await prepShot(f);
+    HACK_SHOTS[key] = { thumb, _full:full };
+    repaintHackShot(key);
+  }catch(err){ toast("Couldn't read that image",1); }
 }
 
 /* Craft times are stored in seconds, but plenty of recipes are quoted in
@@ -2546,19 +2654,22 @@ function openData(){
     const btn = $("#expJson"); btn.disabled = true; btn.textContent = "Gathering…";
     try{
       // records only carry thumbnails, so pull the full images in for the backup
+      const inline = async e => {
+        const id = imgId(e);
+        return id ? { id, thumb:imgThumb(e), data: await getImage(id) } : e;
+      };
       const inlineImages = async rec => {
         const images = [];
-        for(const e of (rec.images||[])){
-          const id = imgId(e);
-          if(id) images.push({ id, thumb:imgThumb(e), data: await getImage(id) });
-          else images.push(e);
-        }
-        return { ...rec, images };
+        for(const e of (rec.images||[])) images.push(await inline(e));
+        // a heist's hacks carry a picture each — a backup without them isn't one
+        const hacks = [];
+        for(const k of (rec.hacks||[])) hacks.push(k.shot? { ...k, shot: await inline(k.shot) } : k);
+        return rec.hacks ? { ...rec, images, hacks } : { ...rec, images };
       };
       const spots = [];   for(const sp of S.spots)   spots.push(await inlineImages(sp));
       const benches = []; for(const bn of S.benches) benches.push(await inlineImages(bn));
       download("street-manual-backup.json",
-        JSON.stringify({v:4, exported:new Date().toISOString(), benches, items:S.items, spots}, null, 2),
+        JSON.stringify({v:5, exported:new Date().toISOString(), benches, items:S.items, spots}, null, 2),
         "application/json");
     }catch(err){ toast("Export failed: "+(err.message||err),1); }
     btn.disabled = false; btn.textContent = "Export backup (.json)";
@@ -2585,13 +2696,15 @@ function openData(){
       if(!confirm(`Replace everything with ${d.items.length} items, ${(d.benches||[]).length} benches and ${sp.length} saved spots?`)) return;
       toast("Importing…");
       await Store.replaceAll(d.items, [], []);   // clears old screenshots too
+      const put = async e => (e && e.data)
+        ? { id: await putImage(e.data), thumb: e.thumb || e.data }
+        : e;
       const restore = async rec => {
         const images = [];
-        for(const e of (rec.images||[])){
-          if(e && e.data) images.push({ id: await putImage(e.data), thumb: e.thumb || e.data });
-          else images.push(e);
-        }
-        return { ...rec, images };
+        for(const e of (rec.images||[])) images.push(await put(e));
+        const hacks = [];
+        for(const k of (rec.hacks||[])) hacks.push(k.shot? { ...k, shot: await put(k.shot) } : k);
+        return rec.hacks ? { ...rec, images, hacks } : { ...rec, images };
       };
       const benches = [];
       for(const one of (d.benches||[])){ const r = await restore(one); await Store.saveBench(r); benches.push(r); }
@@ -2760,7 +2873,9 @@ document.addEventListener("click", e=>{
       S.spots = S.spots.filter(x=>x.id!==sp.id); closeModal(); render();
       offerUndo(`Deleted "${sp.name}"`,
         async ()=>{ const back = await Store.saveSpot(sp); S.spots.push(back); },
-        async ()=>{ for(const e of (sp.images||[])){ const id = imgId(e); if(id) await dropImage(id); } });
+        // the hacks' own pictures go with it, same seven-second grace
+        async ()=>{ for(const e of [...(sp.images||[]), ...hacksOf(sp).map(k=>k.shot)]){
+                      const id = imgId(e); if(id) await dropImage(id); } });
     }).catch(()=>toast("Delete failed",1));
     return;
   }
@@ -2819,9 +2934,12 @@ const SEEN_GUIDE = PFX+"seenGuide";
    would need to know. Anyone who's read an older version gets a dot on the
    How-to-use button and a "New since you last looked" block at the top —
    updating the guide is useless if nobody reopens it. */
-const GUIDE_VERSION = 5;
+const GUIDE_VERSION = 6;
 const WHATS_NEW = [
-  { v:5, when:"Latest", items:[
+  { v:6, when:"Latest", items:[
+    "<b>Every hack can carry its own screenshot</b> — a heist's <i>Hacks to expect</i> list now shows a picture beside each one, so you know which mini-game you're walking into before the door opens."
+  ]},
+  { v:5, items:[
     "<b>Add it to your home screen</b> — on a phone it now installs with the Unholy mark as its icon and opens full-screen, with no browser bar.",
     "<b>Cards are colour-coded down the edge</b> — a craftable now carries its bench's colour as a stripe on its left edge, so the grid sorts itself by bench before you read a word. Raw materials and blueprints have no stripe.",
     "<b>Total time is a floor, not a promise</b> — the Planner adds craft times back-to-back. If a bench caps how much you can run in a window, the real trip takes longer. See <i>About the total time</i> in this guide."
@@ -2854,7 +2972,7 @@ function openGuide(){
     ["Benches",   "Where each bench is, with photos, and everything it makes."],
     ["Drop Offs", "Where to ditch a hot car or swap into a clean one."],
     ["Bus Blocks","Spots to park something big and choke the road behind you."],
-    ["Heists",    "Crew size, gear, the hacks to expect, and the steps."]
+    ["Heists",    "Crew size, gear, the hacks to expect — each with a picture of it — and the steps."]
   ];
 
   openModal(`
@@ -2964,6 +3082,9 @@ function openGuide(){
           <li>Craft time takes <b>seconds or minutes</b> — there's a unit dropdown, and it shows you
               what your number means underneath.</li>
           <li>Screenshots: click, drag, or just <b>paste</b> straight from a fresh grab.</li>
+          <li>On a heist, <b>every hack takes its own screenshot</b> — the square on the hack's row.
+              Click it or drag a picture onto it. One per hack, so the crew can tell a circle hack
+              from a keypad at a glance rather than by name.</li>
           <li>Deleted the wrong thing? There's an <b>Undo</b> button in the message for seven seconds.</li>
           <li>Can something be made two ways? Add the second under <b>Other ways to make it</b> at the
               bottom of the form — its own bench, time and ingredients.</li>
