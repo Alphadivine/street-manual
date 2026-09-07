@@ -51,6 +51,10 @@ without reading. Eight hues in a fixed order, checked for colour-blind separatio
 against the dark background rather than picked by eye; the bench name is always in the tag too, so
 colour is a shortcut and never the only clue. Override any of them with the swatch picker.
 
+That colour also runs down the **left edge of the item card**, so the catalogue grid groups itself
+by bench before you read a word. No stripe means it isn't crafted — a raw material or a blueprint —
+or that it's made at more than one bench.
+
 Benches take **photos** as well. Clicking one opens a detail view with the gallery, its notes and
 everything it makes — open to read-only crew too, so nobody has to describe where a bench is over
 voice.
@@ -415,7 +419,12 @@ Export is available to everyone; import and erase need the edit code.
 
 ## ⌨️ Odds and ends
 
-- **Mobile:** add to home screen. Laid out for a phone, no horizontal scroll.
+- **Installs on a phone.** Add it to your home screen and it opens like an app — the Unholy mark as
+  the icon, full screen, no address bar. iPhone: Safari → Share → *Add to Home Screen*. Android:
+  Chrome menu → *Install app*. Laid out for a phone, no horizontal scroll.
+- **Total craft time is a floor.** The Planner adds the craft times back-to-back; it doesn't know
+  about per-bench limits, cooldowns, queues, or walking between stops. Use it to compare two routes,
+  not to set a clock.
 - **Money tracking** is off by default — prices are hard to pin down in the city. The fields still
   exist, collapsed under **Money** in the edit form; **Data → Display → Track money** brings the
   costs, sell prices and profit figures back. Per device, so turning it on doesn't force it on
